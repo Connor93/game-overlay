@@ -98,3 +98,8 @@ test('importLegacySettings copies the old file once and never overwrites', () =>
 });
 test('importLegacySettings with no legacy file is a no-op', () =>
   expect(importLegacySettings(path.join(os.tmpdir(), 'nope-new.json'), path.join(os.tmpdir(), 'nope-old.json'))).toBe(false));
+
+test('meowdb home is the MapleStory Classic section', () => {
+  expect(MEOWDB_HOME).toBe('https://meowdb.com/msclassic');
+  expect(DEFAULT_MEOWDB.lastUrl).toBe('https://meowdb.com/msclassic');
+});

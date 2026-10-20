@@ -3,7 +3,7 @@ const deepFreeze = (o) => {
   return Object.freeze(o);
 };
 
-const MEOWDB_HOME = 'https://meowdb.com/';
+const MEOWDB_HOME = 'https://meowdb.com/msclassic';
 
 const DEFAULT_CLOCK = deepFreeze({
   fontFamily: '-apple-system, "Segoe UI", sans-serif',
