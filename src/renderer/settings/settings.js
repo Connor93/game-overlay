@@ -2,6 +2,7 @@ const api = window.settingsApi;
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 let settings = null;
+let defaults = null;
 
 // Where each shortcut id lives in the settings (mirrors src/main/shortcut-fields.js).
 const SHORTCUT_FIELDS = {
@@ -133,6 +134,10 @@ function bind() {
     });
   }
 
+  $('resetPanelBounds').addEventListener('click', () =>
+    update({ meowdb: { position: defaults.meowdb.position, size: defaults.meowdb.size } }),
+  );
+
   for (const button of $$('[data-reset]')) {
     button.addEventListener('click', async () => {
       $('fontFamily').blur();
@@ -141,7 +146,8 @@ function bind() {
   }
 }
 
-api.get().then(({ settings: s, shortcutErrors, displays }) => {
+api.get().then(({ settings: s, defaults: d, shortcutErrors, displays }) => {
+  defaults = d;
   applyResult({ settings: s, shortcutErrors });
   renderDisplays(displays);
   bind();

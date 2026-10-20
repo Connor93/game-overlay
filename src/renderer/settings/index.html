@@ -55,7 +55,27 @@
       <button class="secondary" data-reset="clock">Reset clock to defaults</button>
     </section>
 
-    <!-- meowdb panel section goes here -->
+    <h1>meowdb panel</h1>
+    <section>
+      <h2>Look</h2>
+      <label class="row">Opacity when passive
+        <span class="pair"><input data-bind="meowdb.opacity" data-kind="percent" type="range" min="10" max="100"><output data-show="meowdb.opacity" data-unit="%"></output></span>
+      </label>
+      <label class="row">Active highlight color <input data-bind="meowdb.highlightColor" type="color"></label>
+      <label class="row">Start hidden <input data-bind="meowdb.startHidden" type="checkbox"></label>
+    </section>
+
+    <section>
+      <h2>Shortcuts</h2>
+      <div class="row">Activate / deactivate
+        <span class="shortcut"><button class="record" data-shortcut-id="meowdb.toggleActive"></button><small class="error"></small></span>
+      </div>
+      <div class="row">Hide / show
+        <span class="shortcut"><button class="record" data-shortcut-id="meowdb.toggleHide"></button><small class="error"></small></span>
+      </div>
+      <button class="secondary" id="resetPanelBounds">Reset panel position &amp; size</button>
+    </section>
+
 
     <h1>General</h1>
     <section>

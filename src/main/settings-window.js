@@ -1,5 +1,6 @@
 const path = require('path');
 const { BrowserWindow, ipcMain, session } = require('electron');
+const { DEFAULT_SETTINGS } = require('../shared/defaults');
 
 // Registers the settings IPC once and returns an `open()` that shows (or focuses) the window.
 function setupSettingsWindow({ getSettings, getShortcutErrors, getDisplays, updateSettings, resetSettings }) {
@@ -7,6 +8,7 @@ function setupSettingsWindow({ getSettings, getShortcutErrors, getDisplays, upda
 
   ipcMain.handle('settings:get', () => ({
     settings: getSettings(),
+    defaults: DEFAULT_SETTINGS,
     shortcutErrors: getShortcutErrors(),
     displays: getDisplays(),
   }));
