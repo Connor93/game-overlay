@@ -10,8 +10,8 @@
 // Templates (digit-templates.json) are cut from real captures with known text; every instance is
 // kept, since each copy lands on the screen's pixels a little differently.
 
-const GRID_W = 6;
-const GRID_H = 10;
+const GRID_W = 5; // one cell per game pixel of the 5-wide, 8-tall digits
+const GRID_H = 8;
 const NATIVE_HEIGHT = 768;
 const ADVANCE = { d: 6, ',': 5, '[': 6, '.': 4 }; // in the game's own pixels
 const GLYPH_WIDTH = 5; // a digit's drawn width, in the game's own pixels
@@ -137,7 +137,7 @@ function decode(img, scale, templateSet = loadTemplates()) {
 
   const cache = new Map();
   const cell = (x) => {
-    const key = Math.round(x * 2);
+    const key = x.toFixed(3); // exact: advances like 11.25 px don't sit on a half-pixel grid
     if (!cache.has(key)) cache.set(key, matchDigit(features(L, img.width, x, x + GLYPH_WIDTH * scale, band, t), templateSet));
     return cache.get(key);
   };
