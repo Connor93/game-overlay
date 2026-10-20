@@ -13,5 +13,10 @@
     "electron": "^44.9.1",
     "electron-builder": "^26.15.3",
     "vitest": "^5.0.5"
+  },
+  "author": "Connor93",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Connor93/overlay-clock.git"
   }
 }

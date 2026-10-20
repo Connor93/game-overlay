@@ -1,0 +1,27 @@
+appId: com.overlayclock.app
+productName: Overlay Clock
+files:
+  - src/**
+  - package.json
+directories:
+  buildResources: build
+  output: dist
+mac:
+  target:
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
+  identity: "-" # ad-hoc signature: no paid certificate, but downloads aren't reported as "damaged"
+  category: public.app-category.utilities
+  extendInfo:
+    LSUIElement: true # no Dock icon
+win:
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: true
+publish:
+  provider: github
+  releaseType: release
