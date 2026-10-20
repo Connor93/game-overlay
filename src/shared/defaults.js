@@ -22,6 +22,7 @@ const DEFAULT_CLOCK = deepFreeze({
 
 const DEFAULT_MEOWDB = deepFreeze({
   startHidden: false,
+  blockAds: true,
   opacity: 0.85,
   highlightColor: '#ff9f0a',
   shortcutToggleActive: 'Control+Alt+M',

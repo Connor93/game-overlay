@@ -65,7 +65,7 @@ function normalizeMeowdb(raw) {
     ranges: { opacity: [0.1, 1] },
     colors: ['highlightColor'],
     strings: ['shortcutToggleActive', 'shortcutToggleHide'],
-    booleans: ['startHidden'],
+    booleans: ['startHidden', 'blockAds'],
   });
   meowdb.lastUrl = isMeowdbUrl(raw.lastUrl) ? raw.lastUrl : MEOWDB_HOME;
   const size = isObject(raw.size) ? raw.size : {};

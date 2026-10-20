@@ -103,3 +103,9 @@ test('meowdb home is the MapleStory Classic section', () => {
   expect(MEOWDB_HOME).toBe('https://meowdb.com/msclassic');
   expect(DEFAULT_MEOWDB.lastUrl).toBe('https://meowdb.com/msclassic');
 });
+
+test('ad blocking is on by default and can be turned off', () => {
+  expect(DEFAULT_MEOWDB.blockAds).toBe(true);
+  expect(normalizeSettings({ meowdb: { blockAds: false } }).meowdb.blockAds).toBe(false);
+  expect(normalizeSettings({ meowdb: { blockAds: 'no' } }).meowdb.blockAds).toBe(true);
+});

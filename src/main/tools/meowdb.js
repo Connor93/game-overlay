@@ -1,6 +1,7 @@
 const path = require('path');
 const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell } = require('electron');
 const { MEOWDB_HOME } = require('../../shared/defaults');
+const { createAdBlocker } = require('../adblock');
 const { resolvePlacement, positionFromBounds, clampSize } = require('../placement');
 const { ACTIVATE_GRACE_MS, isMeowdbUrl, classifyNavigation, shouldDropToPassive, isPermissionAllowed } = require('../panel-logic');
 
@@ -65,6 +66,7 @@ function create(ctx) {
   meowdbSession.setPermissionRequestHandler((_wc, permission, callback) => callback(isPermissionAllowed(permission)));
   meowdbSession.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission));
   meowdbSession.on('will-download', (event) => event.preventDefault());
+  const adBlocker = createAdBlocker(meowdbSession, path.join(app.getPath('userData'), 'adblock-engine.bin'));
 
   const view = new WebContentsView({
     webPreferences: { partition: 'persist:meowdb', sandbox: true, contextIsolation: true, nodeIntegration: false },
@@ -267,7 +269,8 @@ function create(ctx) {
   });
 
   place();
-  view.webContents.loadURL(settings().lastUrl);
+  // Turn ad blocking on (if wanted) before the first page, so its ads never load.
+  adBlocker.setEnabled(settings().blockAds).finally(() => view.webContents.loadURL(settings().lastUrl));
   if (!hidden) win.once('ready-to-show', show);
 
   const shortcutHandlers = {
@@ -291,6 +294,7 @@ function create(ctx) {
     ],
     applySettings(section, prev) {
       pushState();
+      if (section.blockAds !== prev.blockAds) adBlocker.setEnabled(section.blockAds).then(() => view.webContents.reload());
       if (!active) win.setOpacity(section.opacity);
       const moved = JSON.stringify([section.position, section.size]) !== JSON.stringify([prev.position, prev.size]);
       if (moved) place();

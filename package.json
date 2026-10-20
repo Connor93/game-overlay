@@ -18,5 +18,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Connor93/game-overlay.git"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "2.18.2"
   }
 }

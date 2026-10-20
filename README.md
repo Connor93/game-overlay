@@ -66,6 +66,8 @@ To go back to the game, press the shortcut again, or just click the game. The pa
 
 The panel remembers its position, its size, the last page you were on, and your meowdb login. Links to other websites open in your normal browser.
 
+**Ads:** the panel blocks ads by default. meowdb is family-run and supported by its ads, so if you'd like to support it, turn off **Block ads** in Settings → meowdb panel.
+
 ### The clock
 
 To move the clock, press the unlock shortcut. A dashed box appears, and you can drag the clock anywhere, including onto another monitor. Press the shortcut again to lock it in place.
