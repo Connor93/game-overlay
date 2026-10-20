@@ -1,19 +1,9 @@
 {
   "name": "overlay-clock",
-  "version": "0.1.1",
+  "version": "0.0.0",
   "description": "An always-on-top, transparent clock overlay",
   "main": "src/main/main.js",
   "private": true,
-  "scripts": {
-    "start": "electron .",
-    "test": "vitest run",
-    "dist": "electron-builder"
-  },
-  "devDependencies": {
-    "electron": "^44.9.1",
-    "electron-builder": "^26.15.3",
-    "vitest": "^5.0.5"
-  },
   "author": "Connor93",
   "repository": {
     "type": "git",

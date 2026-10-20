@@ -1,4 +1,11 @@
-const DEFAULT_SETTINGS = Object.freeze({
+const deepFreeze = (o) => {
+  for (const v of Object.values(o)) if (typeof v === 'object' && v !== null) deepFreeze(v);
+  return Object.freeze(o);
+};
+
+const MEOWDB_HOME = 'https://meowdb.com/';
+
+const DEFAULT_CLOCK = deepFreeze({
   fontFamily: '-apple-system, "Segoe UI", sans-serif',
   fontWeight: 700,
   fontSize: 64,
@@ -10,8 +17,25 @@ const DEFAULT_SETTINGS = Object.freeze({
   hour12: true,
   shortcutToggleLock: 'Control+Alt+C',
   shortcutToggleHide: 'Control+Alt+H',
-  openAtLogin: false,
-  position: Object.freeze({ displayId: null, anchorX: 'right', offsetX: 20, anchorY: 'top', offsetY: 20 }),
+  position: { displayId: null, anchorX: 'right', offsetX: 20, anchorY: 'top', offsetY: 20 },
 });
 
-module.exports = { DEFAULT_SETTINGS };
+const DEFAULT_MEOWDB = deepFreeze({
+  startHidden: false,
+  opacity: 0.85,
+  highlightColor: '#ff9f0a',
+  shortcutToggleActive: 'Control+Alt+M',
+  shortcutToggleHide: 'Control+Alt+N',
+  lastUrl: MEOWDB_HOME,
+  size: { width: 520, height: 700 },
+  position: { displayId: null, anchorX: 'left', offsetX: 40, anchorY: 'top', offsetY: 80 },
+});
+
+const DEFAULT_SETTINGS = deepFreeze({
+  version: 2,
+  app: { openAtLogin: false },
+  clock: DEFAULT_CLOCK,
+  meowdb: DEFAULT_MEOWDB,
+});
+
+module.exports = { DEFAULT_SETTINGS, DEFAULT_CLOCK, DEFAULT_MEOWDB, MEOWDB_HOME };
