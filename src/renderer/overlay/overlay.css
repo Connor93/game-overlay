@@ -1,0 +1,24 @@
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+#clock {
+  display: inline-block;
+  white-space: nowrap;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums; /* digits all the same width, so the clock doesn't jitter */
+  paint-order: stroke fill;
+  border: 2px dashed transparent;
+  border-radius: 6px;
+}
+
+body.unlocked #clock {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.25);
+  -webkit-app-region: drag;
+  cursor: move;
+}
