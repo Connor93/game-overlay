@@ -19,7 +19,7 @@ const { loginItemSettings } = require('./login-item');
 //     reshow(), onSecondInstance() }
 // ctx gives a tool its own settings section: getSettings(), saveSettings(patch) (save without
 // re-applying), updateSettings(patch) (save and apply), plus refreshTray() and reshowOverlays().
-const TOOL_MODULES = [require('./tools/clock')];
+const TOOL_MODULES = [require('./tools/clock'), require('./tools/meowdb')];
 
 const SAVE_DELAY_MS = 300;
 // What a "reset to defaults" keeps per section, so the tool stays where the user put it.
@@ -114,6 +114,8 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     for (const mod of TOOL_MODULES) tools[mod.id] = mod.create(contextFor(mod.id));
+    // Lets a debugger drive the tools during manual testing; off unless explicitly enabled.
+    if (process.env.GAME_OVERLAY_DEBUG) globalThis.gameOverlay = { tools, getSettings: () => settings };
     openSettings = setupSettingsWindow({
       getSettings: () => settings,
       getShortcutErrors: () => shortcutErrors,

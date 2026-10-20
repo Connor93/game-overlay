@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <link rel="stylesheet" href="frame.css">
+</head>
+<body>
+  <!-- meowdb itself is a separate view laid over the middle of this page by the main process. -->
+  <div id="border"></div>
+  <header id="toolbar">
+    <button data-nav="back" title="Back">‹</button>
+    <button data-nav="forward" title="Forward">›</button>
+    <button data-nav="home" title="meowdb home">⌂</button>
+    <button data-nav="reload" title="Reload">↻</button>
+    <span class="title">meowdb</span>
+    <span id="tag">ACTIVE</span>
+  </header>
+  <div id="error" hidden>
+    <p><strong>Couldn't load meowdb</strong></p>
+    <p id="errorText"></p>
+    <button data-nav="reload">Reload</button>
+  </div>
+  <footer id="statusbar"><span class="hint">Drag the bar above to move · drag edges to resize</span></footer>
+  <div class="resize" data-edge="right"></div>
+  <div class="resize" data-edge="bottom"></div>
+  <div class="resize" data-edge="corner"></div>
+  <script src="frame.js"></script>
+</body>
+</html>
