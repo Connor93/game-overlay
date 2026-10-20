@@ -11,34 +11,16 @@ function trayIcon() {
   return nativeImage.createFromPath(path.join(__dirname, '../assets/tray-win.png')).resize({ width: 16, height: 16 });
 }
 
-function createTray({ overlay, openSettings, quit }) {
+// `getSections` returns one array of menu items per tool; they're shown in order, separated.
+function createTray({ getSections, openSettings, quit }) {
   const tray = new Tray(trayIcon());
-  tray.setToolTip('Overlay Clock');
+  tray.setToolTip('Game Overlay');
 
   function refresh() {
-    tray.setContextMenu(
-      Menu.buildFromTemplate([
-        {
-          label: overlay.isLocked() ? 'Unlock to move' : 'Lock',
-          click: () => {
-            if (overlay.isLocked() && overlay.isHidden()) overlay.setHidden(false);
-            overlay.setLocked(!overlay.isLocked());
-            refresh();
-          },
-        },
-        {
-          label: overlay.isHidden() ? 'Show' : 'Hide',
-          click: () => {
-            overlay.setHidden(!overlay.isHidden());
-            refresh();
-          },
-        },
-        { type: 'separator' },
-        { label: 'Settings…', click: openSettings },
-        { type: 'separator' },
-        { label: 'Quit Overlay Clock', click: quit },
-      ]),
-    );
+    const template = [];
+    for (const items of getSections()) template.push(...items, { type: 'separator' });
+    template.push({ label: 'Settings…', click: openSettings }, { type: 'separator' }, { label: 'Quit Game Overlay', click: quit });
+    tray.setContextMenu(Menu.buildFromTemplate(template));
   }
 
   // Windows only opens the context menu on right-click by default; open it on left-click too.

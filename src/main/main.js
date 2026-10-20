@@ -1,27 +1,44 @@
 const path = require('path');
 const { app, globalShortcut, screen } = require('electron');
 const { DEFAULT_SETTINGS } = require('../shared/defaults');
-const { normalizeSettings, loadSettings, saveSettings } = require('./settings-store');
-const { createOverlay } = require('./overlay-window');
+const {
+  normalizeSettings,
+  mergeSettingsPatch,
+  loadSettings,
+  saveSettings,
+  importLegacySettings,
+} = require('./settings-store');
 const { registerShortcuts, applyShortcuts } = require('./shortcuts');
+const { shortcutMapFromSettings, withAppliedShortcuts } = require('./shortcut-fields');
 const { createTray } = require('./tray');
 const { setupSettingsWindow } = require('./settings-window');
 const { loginItemSettings } = require('./login-item');
 
+// Each tool module exports { id, create(ctx) } and create() returns:
+//   { window, shortcutHandlers: { [shortcutId]: fn }, trayItems(), applySettings(section, prevSection),
+//     reshow(), onSecondInstance() }
+// ctx gives a tool its own settings section: getSettings(), saveSettings(patch) (save without
+// re-applying), updateSettings(patch) (save and apply), plus refreshTray() and reshowOverlays().
+const TOOL_MODULES = [require('./tools/clock')];
+
 const SAVE_DELAY_MS = 300;
+// What a "reset to defaults" keeps per section, so the tool stays where the user put it.
+const KEEP_ON_RESET = { clock: ['position'], meowdb: ['position', 'size', 'lastUrl'] };
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  // No Dock icon. This also lets the overlay join other apps' full-screen spaces.
+  // No Dock icon. This also lets the overlays join other apps' full-screen spaces.
   if (process.platform === 'darwin') app.dock.hide();
 
   const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+  // First launch after the rename from Overlay Clock: bring its settings over.
+  importLegacySettings(settingsPath, path.join(app.getPath('appData'), 'overlay-clock', 'settings.json'));
   let settings = loadSettings(settingsPath);
-  let overlay;
+  const tools = {};
   let tray;
   let openSettings;
-  let shortcutErrors = []; // settings fields whose shortcut isn't registered right now
+  let shortcutErrors = []; // shortcut ids that aren't registered right now
 
   // Sliders send many changes a second; batch the writes.
   let saveTimer = null;
@@ -35,24 +52,7 @@ if (!app.requestSingleInstanceLock()) {
     saveSettings(settingsPath, settings);
   }
 
-  function setPosition(position) {
-    settings = { ...settings, position };
-    saveSoon();
-  }
-
-  const shortcutMap = (s) => ({ toggleLock: s.shortcutToggleLock, toggleHide: s.shortcutToggleHide });
-  const SHORTCUT_FIELDS = { toggleLock: 'shortcutToggleLock', toggleHide: 'shortcutToggleHide' };
-  const shortcutHandlers = {
-    toggleLock() {
-      if (overlay.isLocked() && overlay.isHidden()) overlay.setHidden(false); // can't drag what you can't see
-      overlay.setLocked(!overlay.isLocked());
-      tray.refresh();
-    },
-    toggleHide() {
-      overlay.setHidden(!overlay.isHidden());
-      tray.refresh();
-    },
-  };
+  const allShortcutHandlers = () => Object.assign({}, ...Object.values(tools).map((t) => t.shortcutHandlers));
 
   // Displays for the "Show on" picker, numbered left to right.
   function getDisplays() {
@@ -67,43 +67,53 @@ if (!app.requestSingleInstanceLock()) {
       }));
   }
 
-  // Apply a full new settings object: shortcuts (with rollback), login item, overlay, display.
+  // Apply a full new settings object: shortcuts (with rollback), login item, then each changed tool.
   function commitSettings(next) {
-    const prevShortcuts = shortcutMap(settings);
-    const nextShortcuts = shortcutMap(next);
-    const shortcutsChanged =
-      nextShortcuts.toggleLock !== prevShortcuts.toggleLock || nextShortcuts.toggleHide !== prevShortcuts.toggleHide;
+    const prevShortcuts = shortcutMapFromSettings(settings);
+    const nextShortcuts = shortcutMapFromSettings(next);
+    const shortcutsChanged = Object.keys(nextShortcuts).some((id) => nextShortcuts[id] !== prevShortcuts[id]);
     // Also retry when something failed before, e.g. the user re-picks a key another app has since released.
     if (shortcutsChanged || shortcutErrors.length) {
-      const { applied, failed } = applyShortcuts(nextShortcuts, prevShortcuts, shortcutHandlers);
-      next.shortcutToggleLock = applied.toggleLock;
-      next.shortcutToggleHide = applied.toggleHide;
-      shortcutErrors = failed.map((name) => SHORTCUT_FIELDS[name]);
+      const { applied, failed } = applyShortcuts(nextShortcuts, prevShortcuts, allShortcutHandlers());
+      next = withAppliedShortcuts(next, applied);
+      shortcutErrors = failed;
     }
     // In development this would register the bare Electron binary, so only do it in the real app.
-    if (app.isPackaged && next.openAtLogin !== settings.openAtLogin) {
-      app.setLoginItemSettings(loginItemSettings(next.openAtLogin));
+    if (app.isPackaged && next.app.openAtLogin !== settings.app.openAtLogin) {
+      app.setLoginItemSettings(loginItemSettings(next.app.openAtLogin));
     }
-    const displayChanged = next.position.displayId !== settings.position.displayId;
+    const prev = settings;
     settings = next;
     saveSoon();
-    overlay.applySettings(settings);
-    if (displayChanged) overlay.moveToDisplay(settings.position.displayId);
+    for (const [id, tool] of Object.entries(tools)) {
+      if (JSON.stringify(next[id]) !== JSON.stringify(prev[id])) tool.applySettings(next[id], prev[id]);
+    }
     return { settings, shortcutErrors };
   }
 
-  function updateSettings(patch) {
-    const position = { ...settings.position, ...(patch.position || {}) };
-    return commitSettings(normalizeSettings({ ...settings, ...patch, position }));
+  const updateSettings = (patch) => commitSettings(mergeSettingsPatch(settings, patch));
+
+  function resetSettings(section) {
+    if (!KEEP_ON_RESET[section]) return { settings, shortcutErrors };
+    const kept = Object.fromEntries(KEEP_ON_RESET[section].map((key) => [key, settings[section][key]]));
+    return commitSettings(normalizeSettings({ ...settings, [section]: { ...DEFAULT_SETTINGS[section], ...kept } }));
   }
 
-  // Everything back to defaults except where the clock currently is.
-  function resetSettings() {
-    return commitSettings(normalizeSettings({ ...DEFAULT_SETTINGS, position: settings.position }));
+  function contextFor(id) {
+    return {
+      getSettings: () => settings[id],
+      saveSettings(patch) {
+        settings = mergeSettingsPatch(settings, { [id]: patch });
+        saveSoon();
+      },
+      updateSettings: (patch) => updateSettings({ [id]: patch }),
+      refreshTray: () => tray && tray.refresh(),
+      reshowOverlays: () => Object.values(tools).forEach((t) => t.reshow()),
+    };
   }
 
   app.whenReady().then(() => {
-    overlay = createOverlay(() => settings, setPosition);
+    for (const mod of TOOL_MODULES) tools[mod.id] = mod.create(contextFor(mod.id));
     openSettings = setupSettingsWindow({
       getSettings: () => settings,
       getShortcutErrors: () => shortcutErrors,
@@ -111,29 +121,34 @@ if (!app.requestSingleInstanceLock()) {
       updateSettings,
       resetSettings,
     });
-    tray = createTray({ overlay, openSettings, quit: () => app.quit() });
-    const { failed } = registerShortcuts(shortcutMap(settings), shortcutHandlers);
-    shortcutErrors = failed.map((name) => SHORTCUT_FIELDS[name]);
+    tray = createTray({
+      getSections: () => Object.values(tools).map((t) => t.trayItems()),
+      openSettings,
+      quit: () => app.quit(),
+    });
+    const { failed } = registerShortcuts(shortcutMapFromSettings(settings), allShortcutHandlers());
+    shortcutErrors = failed;
     if (failed.length) console.error(`Could not register shortcuts: ${failed.join(', ')}`);
     // The user may have removed the login item in the OS; show what's really set.
     if (app.isPackaged) {
-      settings.openAtLogin = app.getLoginItemSettings(loginItemSettings(settings.openAtLogin)).openAtLogin;
+      const { openAtLogin } = app.getLoginItemSettings(loginItemSettings(settings.app.openAtLogin));
+      settings = mergeSettingsPatch(settings, { app: { openAtLogin } });
     }
   });
 
-  // Launching it again (e.g. from the Start menu when the tray icon is tucked away) brings the clock back.
+  // Launching it again (e.g. from the Start menu when the tray icon is tucked away) brings things back.
   app.on('second-instance', () => {
-    if (!overlay) return;
-    overlay.setHidden(false);
+    if (!tray) return;
+    Object.values(tools).forEach((t) => t.onSecondInstance());
     tray.refresh();
     openSettings();
   });
 
   // It's a tray app: closing windows must not quit it.
   app.on('window-all-closed', () => {});
-  // The overlay isn't closable (see overlay-window.js), so quitting has to destroy it explicitly.
+  // Tool windows aren't closable (see overlay-window.js), so quitting has to destroy them explicitly.
   app.on('before-quit', () => {
-    if (overlay && !overlay.window.isDestroyed()) overlay.window.destroy();
+    for (const tool of Object.values(tools)) if (!tool.window.isDestroyed()) tool.window.destroy();
   });
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();

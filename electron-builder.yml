@@ -1,5 +1,5 @@
-appId: com.overlayclock.app
-productName: Overlay Clock
+appId: com.gameoverlay.app
+productName: Game Overlay
 files:
   - src/**
   - package.json

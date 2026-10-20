@@ -3,57 +3,63 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
-  <title>Overlay Clock Settings</title>
+  <title>Game Overlay Settings</title>
   <link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <main>
+    <h1>Clock</h1>
     <section>
       <h2>Text</h2>
       <label class="row">Font
         <input id="fontFamily" list="fontList" placeholder="System default" autocomplete="off">
         <datalist id="fontList"></datalist>
       </label>
-      <label class="row">Bold <input id="bold" type="checkbox"></label>
+      <label class="row">Bold <input data-bind="clock.fontWeight" data-kind="bold" type="checkbox"></label>
       <label class="row">Size
-        <span class="pair"><input id="fontSizeRange" type="range" min="8" max="400"><input id="fontSize" type="number" min="8" max="400"></span>
+        <span class="pair">
+          <input data-bind="clock.fontSize" type="range" min="8" max="400">
+          <input data-bind="clock.fontSize" type="number" min="8" max="400">
+        </span>
       </label>
-      <label class="row">Text color <input id="color" type="color"></label>
+      <label class="row">Text color <input data-bind="clock.color" type="color"></label>
     </section>
 
     <section>
       <h2>Outline</h2>
-      <label class="row">Outline color <input id="outlineColor" type="color"></label>
+      <label class="row">Outline color <input data-bind="clock.outlineColor" type="color"></label>
       <label class="row">Thickness
-        <span class="pair"><input id="outlineWidth" type="range" min="0" max="20"><output id="outlineWidthOut"></output></span>
+        <span class="pair"><input data-bind="clock.outlineWidth" type="range" min="0" max="20"><output data-show="clock.outlineWidth" data-unit="px"></output></span>
       </label>
     </section>
 
     <section>
-      <h2>Clock</h2>
+      <h2>Display</h2>
       <label class="row">Opacity
-        <span class="pair"><input id="opacity" type="range" min="10" max="100"><output id="opacityOut"></output></span>
+        <span class="pair"><input data-bind="clock.opacity" data-kind="percent" type="range" min="10" max="100"><output data-show="clock.opacity" data-unit="%"></output></span>
       </label>
-      <label class="row">Show seconds <input id="showSeconds" type="checkbox"></label>
-      <label class="row">24-hour time <input id="hour24" type="checkbox"></label>
+      <label class="row">Show seconds <input data-bind="clock.showSeconds" type="checkbox"></label>
+      <label class="row">24-hour time <input data-bind="clock.hour12" data-kind="inverse" type="checkbox"></label>
       <label class="row" id="displayRow" hidden>Show on <select id="displayId"></select></label>
     </section>
 
     <section>
       <h2>Shortcuts</h2>
       <div class="row">Unlock / lock to move
-        <span class="shortcut"><button id="shortcutToggleLock" class="record"></button><small class="error" id="shortcutToggleLockError"></small></span>
+        <span class="shortcut"><button class="record" data-shortcut-id="clock.toggleLock"></button><small class="error"></small></span>
       </div>
       <div class="row">Hide / show
-        <span class="shortcut"><button id="shortcutToggleHide" class="record"></button><small class="error" id="shortcutToggleHideError"></small></span>
+        <span class="shortcut"><button class="record" data-shortcut-id="clock.toggleHide"></button><small class="error"></small></span>
       </div>
       <p class="hint">Click a shortcut, then press the new key combination. Esc cancels.</p>
+      <button class="secondary" data-reset="clock">Reset clock to defaults</button>
     </section>
 
+    <!-- meowdb panel section goes here -->
+
+    <h1>General</h1>
     <section>
-      <h2>General</h2>
-      <label class="row">Start at login <input id="openAtLogin" type="checkbox"></label>
-      <button id="reset" class="secondary">Reset to defaults</button>
+      <label class="row">Start at login <input data-bind="app.openAtLogin" type="checkbox"></label>
     </section>
   </main>
   <script src="accelerator.js"></script>

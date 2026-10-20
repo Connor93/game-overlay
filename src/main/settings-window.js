@@ -11,7 +11,7 @@ function setupSettingsWindow({ getSettings, getShortcutErrors, getDisplays, upda
     displays: getDisplays(),
   }));
   ipcMain.handle('settings:update', (_e, patch) => updateSettings(patch));
-  ipcMain.handle('settings:reset', () => resetSettings());
+  ipcMain.handle('settings:reset', (_e, section) => resetSettings(section));
 
   // The font picker uses the Local Font Access API; allow it for the settings window only.
   const isSettings = (wc) => win !== null && !win.isDestroyed() && wc === win.webContents;
@@ -29,7 +29,7 @@ function setupSettingsWindow({ getSettings, getShortcutErrors, getDisplays, upda
     win = new BrowserWindow({
       width: 440,
       height: 760,
-      title: 'Overlay Clock Settings',
+      title: 'Game Overlay Settings',
       resizable: true,
       minimizable: false,
       fullscreenable: false,

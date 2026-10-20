@@ -124,6 +124,10 @@ function createOverlay(getSettings, onPositionChange) {
       if (hidden) win.hide();
       else if (size) show();
     },
+    // Show again (without taking focus) after something hid every app window, e.g. app.hide().
+    reshow() {
+      if (!win.isDestroyed() && !hidden && size) show();
+    },
     moveToDisplay(displayId) {
       onPositionChange({ ...getSettings().position, displayId });
       place();
