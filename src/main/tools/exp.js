@@ -30,6 +30,7 @@ function create(ctx) {
   let misses = 0;
   let lastVerdict = null;
   let busy = false;
+  let askedPermission = false;
 
   const capture = createCapture();
   const ocr = createOcr();
@@ -157,8 +158,16 @@ function create(ctx) {
     busy = true;
     tickCount += 1;
     try {
-      if (capture.permission() !== 'granted') hint = 'no-permission';
-      else await sample();
+      const permission = capture.permission();
+      if (permission !== 'granted') {
+        hint = 'no-permission';
+        if (permission === 'not-determined' && !askedPermission) {
+          askedPermission = true;
+          capture.requestPermission();
+        }
+      } else {
+        await sample();
+      }
     } catch (err) {
       hint = err.code === 'no-permission' ? 'no-permission' : 'cant-read';
       if (err.code !== 'no-permission') console.error(`EXP tracker: ${err.message}`);
@@ -204,7 +213,11 @@ function create(ctx) {
       saveHistory(historyPath, history);
       if (openMap && !history.some((s) => s.map === openMap)) openMap = null;
     },
-    'exp:permission-settings': () => process.platform === 'darwin' && shell.openExternal(PERMISSION_PANE),
+    'exp:permission-settings': () => {
+      if (process.platform !== 'darwin') return;
+      capture.requestPermission(); // makes sure Game Overlay is in the list to switch on
+      shell.openExternal(PERMISSION_PANE);
+    },
     'exp:relocate': () => ctx.saveSettings({ regions: null }),
   };
   const listeners = Object.entries(handlers).map(([channel, fn]) => {

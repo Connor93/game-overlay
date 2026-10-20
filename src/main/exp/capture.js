@@ -69,6 +69,8 @@ function createCapture() {
 
   // macOS needs the Screen Recording permission; elsewhere there's nothing to grant.
   const permission = () => (process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('screen') : 'granted');
+  // macOS only asks (and lists the app under Screen Recording) once the app tries to capture.
+  const requestPermission = () => desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } }).catch(() => {});
 
   // Resolves to { width, height, parts: Img & {x, y}[] } in the display's physical pixels.
   async function grab(rects = null, timeoutMs = 10000) {
@@ -108,6 +110,7 @@ function createCapture() {
       ipcMain.removeListener('capture:error', onError);
     },
     permission,
+    requestPermission,
   };
 }
 
