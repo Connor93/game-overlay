@@ -2,11 +2,15 @@
 //
 // Within one level, EXP needed for the level is fixed, and the on-screen percentage (two decimals)
 // pins it to a narrow range: required ≈ exp / pct. Every trusted reading narrows that range; a
-// reading whose own range doesn't overlap it must be a misread. Level-ups reset the range.
-// A reading the digit reader wasn't sure of (sure: false) can only confirm the range, never set it.
+// reading whose own range doesn't overlap it must be a misread. A level-up is lower EXP that only
+// fits a bigger requirement; it starts a new range. A reading the digit reader wasn't sure of
+// (sure: false) can only confirm the range, never set it, and one within the rounding slack of the
+// last trusted reading is treated as that reading (it's noise, not a gain).
+//
+// Statuses: ok, levelup (with previousRequired), rebase (what we knew was wrong: take the new
+// values as the baseline without counting the jump), reject.
 
 const PCT_HALF_STEP = 0.005; // the percentage is rounded to two decimals
-const LEVEL_UP_PCT_DROP = 50;
 const RECOVER_AFTER_REJECTS = 3;
 
 function requiredRange({ exp, pct }) {
@@ -39,6 +43,9 @@ function createValidator() {
     if (reading.sure === false) {
       const both = required && overlap(required, range);
       if (!both) return verdict('reject');
+      // Within the rounding slack, the reading can't tell a gain from a misread: keep what we had.
+      const slack = (required[0] * 2 * PCT_HALF_STEP) / 100;
+      if (Math.abs(reading.exp - last.exp) <= slack) return { ...verdict('ok'), exp: last.exp, pct: last.pct };
       trust(reading, both);
       return verdict('ok');
     }
@@ -47,8 +54,8 @@ function createValidator() {
       trust(reading, range);
       return verdict('ok');
     }
-    // A level-up: EXP and percentage both fall, the percentage by a lot.
-    if (last.pct - reading.pct > LEVEL_UP_PCT_DROP && reading.exp < last.exp) {
+    // A level-up: EXP falls, and the reading only fits a bigger requirement than this level's.
+    if (reading.exp < last.exp && range[0] > required[1]) {
       const previousRequired = required;
       trust(reading, range);
       return verdict('levelup', { previousRequired });
@@ -64,7 +71,7 @@ function createValidator() {
     streak = agreeing ? { count: streak.count + 1, range: agreeing } : { count: 1, range };
     if (streak.count >= RECOVER_AFTER_REJECTS) {
       trust(reading, streak.range);
-      return verdict('ok');
+      return verdict('rebase');
     }
     return verdict('reject');
   }

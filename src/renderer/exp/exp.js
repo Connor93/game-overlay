@@ -5,6 +5,7 @@ const HINTS = {
   locating: 'Looking for the EXP bar…',
   'cant-find': "Can't find the EXP bar. Is the game on screen?",
   'cant-read': "Can't read the EXP bar right now",
+  reading: 'Reading the EXP bar… (not sure of the numbers yet)',
   covered: 'Part of the game is covered by a panel',
   'no-permission': 'Allow Screen Recording for Game Overlay',
 };

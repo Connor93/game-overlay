@@ -13,6 +13,8 @@ const img = require('../exp/image');
 const SAMPLE_MS = 4000;
 const READ_MAP_EVERY = 3; // ticks
 const RELOCATE_AFTER_MISSES = 5;
+const LOCATE_RETRY_MS = 30000; // looking for the bar is a full-screen scan: not every tick
+const READING_HINT_AFTER_REJECTS = 3;
 const MIN_SIZE = { width: 220, height: 200 };
 const PERMISSION_PANE = 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture';
 
@@ -29,6 +31,8 @@ function create(ctx) {
   let hint = null;
   let tickCount = 0;
   let misses = 0;
+  let rejects = 0; // readings in a row the validator didn't trust
+  let nextLocateAt = 0;
   let lastVerdict = null;
   let busy = false;
   let askedPermission = false;
@@ -116,15 +120,30 @@ function create(ctx) {
     return null;
   }
 
+  // The bar was lost or is being looked for again: the next reading is a new baseline (it may be
+  // another character, or a different screen), not a gain.
+  function forgetPosition() {
+    validator.reset();
+    machine.forgetExp();
+    lastVerdict = null;
+    rejects = 0;
+    nextLocateAt = 0;
+  }
+
   async function sample() {
     const t = Date.now();
     let regions = settings().regions;
     if (!regions) {
+      if (t < nextLocateAt) {
+        hint = 'cant-find';
+        return;
+      }
       hint = 'locating';
       panel.pushState();
       regions = await locate();
       if (!regions) {
         hint = 'cant-find';
+        nextLocateAt = t + LOCATE_RETRY_MS;
         return;
       }
     }
@@ -145,11 +164,16 @@ function create(ctx) {
       if (reading) {
         misses = 0;
         verdict = validator.accept(reading);
-        if (verdict.status !== 'reject') lastVerdict = verdict;
+        if (verdict.status === 'reject') rejects += 1;
+        else {
+          rejects = 0;
+          lastVerdict = verdict;
+        }
       } else if (++misses >= RELOCATE_AFTER_MISSES) {
         // The bar may have moved (resolution change, different display): find it again.
         misses = 0;
         ctx.saveSettings({ regions: null });
+        forgetPosition();
       }
     }
     // A map name only counts when the EXP bar read too: proof the game itself is on screen, not
@@ -159,13 +183,16 @@ function create(ctx) {
 
     machine.sample({ t, verdict, map });
     machine.tick(t);
-    hint = expCovered || mapCovered ? 'covered' : misses >= 2 ? 'cant-read' : null;
+    hint = expCovered || mapCovered ? 'covered' : misses >= 2 ? 'cant-read' : rejects >= READING_HINT_AFTER_REJECTS ? 'reading' : null;
   }
 
   async function onTick() {
     if (busy) return;
     const tracking = machine.state().status !== 'idle';
-    if (panel.isHidden() && !tracking) return; // nothing to show and nothing to record
+    if (panel.isHidden() && !tracking) {
+      capture.stop(); // nothing to show and nothing to record: let go of the screen
+      return;
+    }
     busy = true;
     tickCount += 1;
     try {
@@ -229,7 +256,10 @@ function create(ctx) {
       capture.requestPermission(); // makes sure Game Overlay is in the list to switch on
       shell.openExternal(PERMISSION_PANE);
     },
-    'exp:relocate': () => ctx.saveSettings({ regions: null }),
+    'exp:relocate': () => {
+      ctx.saveSettings({ regions: null });
+      forgetPosition();
+    },
   };
   const listeners = Object.entries(handlers).map(([channel, fn]) => {
     const listener = (event, arg) => {
@@ -269,6 +299,7 @@ function create(ctx) {
     applySettings(section, prev) {
       panel.applySettings(section, prev);
       if (section.autoStart !== prev.autoStart) machine.setAutoStart(section.autoStart);
+      if (prev.regions && !section.regions) forgetPosition(); // Settings → Find EXP bar again
     },
     reshow: panel.reshow,
     onSecondInstance: panel.onSecondInstance,

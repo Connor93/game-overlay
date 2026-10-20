@@ -195,3 +195,35 @@ test('rejected readings change nothing', () => {
   m.sample({ t, verdict: { status: 'reject', exp: 99999, pct: 50 }, map: MAP_A });
   expect(m.state().session.gainedExp).toBe(gained);
 });
+
+test('a rebase moves the baseline without counting the jump', () => {
+  const { m } = setup();
+  m.sample({ t: 0, verdict: ok(1000), map: MAP_A });
+  m.start(0);
+  m.sample({ t: 4 * S, verdict: { status: 'rebase', exp: 5000, pct: 60, required: [8000, 8010] }, map: MAP_A });
+  m.sample({ t: 8 * S, verdict: ok(5100), map: MAP_A });
+  expect(m.state().session.gainedExp).toBe(100);
+  expect(m.state().lastExp).toBe(5100);
+});
+
+test('after forgetExp the next reading is a fresh baseline, not a gain', () => {
+  const { m } = setup();
+  m.sample({ t: 0, verdict: ok(1000), map: MAP_A });
+  m.start(0);
+  m.forgetExp();
+  m.sample({ t: 4 * S, verdict: ok(90000), map: MAP_A });
+  m.sample({ t: 8 * S, verdict: ok(90050), map: MAP_A });
+  expect(m.state().session.gainedExp).toBe(50);
+});
+
+test('an idle player whose reading flickers (sure / unsure, a few EXP apart) never auto-starts', () => {
+  const { createValidator } = require('../src/shared/exp/validator');
+  const v = createValidator();
+  const { m } = setup();
+  for (let i = 0; i < 20; i++) {
+    const reading = i % 2 ? { exp: 35298, pct: 87.13, sure: false } : { exp: 35296, pct: 87.12, sure: true };
+    m.sample({ t: i * 4 * S, verdict: v.accept(reading), map: MAP_A });
+    m.tick(i * 4 * S);
+  }
+  expect(m.state().status).toBe('idle');
+});

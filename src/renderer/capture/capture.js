@@ -29,17 +29,16 @@ api.onGrab(async (request) => {
     const width = v.videoWidth;
     const height = v.videoHeight;
     if (!width || !height) return;
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(v, 0, 0);
+    // Copy out just the requested rects: a full-size canvas per grab is wasted work when reading.
     const rects = request.rects || [{ x: 0, y: 0, width, height }];
     const parts = rects.map((r) => {
       const x = Math.max(0, Math.round(r.x));
       const y = Math.max(0, Math.round(r.y));
       const w = Math.max(1, Math.min(width - x, Math.round(r.width)));
       const h = Math.max(1, Math.min(height - y, Math.round(r.height)));
-      const pixels = ctx.getImageData(x, y, w, h);
-      return { x, y, width: w, height: h, data: pixels.data.buffer };
+      const ctx = new OffscreenCanvas(w, h).getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, x, y, w, h, 0, 0, w, h);
+      return { x, y, width: w, height: h, data: ctx.getImageData(0, 0, w, h).data.buffer };
     });
     api.sendFrame({ id: request.id, width, height, parts });
   } catch (err) {

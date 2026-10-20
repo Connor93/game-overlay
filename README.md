@@ -100,7 +100,7 @@ The EXP tracker is a panel like meowdb's, passive and active in the same way (�
 
 **What it needs to see:** the EXP numbers along the bottom of the game, and the map name in the minimap. Keep the minimap open, and keep the meowdb panel (or anything else) off both. If the tracker can't read the map name, it asks you to type one.
 
-It works at any resolution, full screen or windowed. If it keeps saying it can't read the EXP bar after you change resolution or move the game to another monitor, use **Settings → EXP tracker → Find EXP bar again**.
+It works at any resolution, in full screen or borderless / windowed full screen. (A small game window on your desktop isn't supported yet.) If it keeps saying it can't read the EXP bar after you change resolution or move the game to another monitor, use **Settings → EXP tracker → Find EXP bar again**.
 
 **Privacy:** the tracker looks at small parts of the screen every few seconds, in memory. Nothing is saved or sent anywhere; only your session results are kept, on your computer.
 
@@ -116,7 +116,7 @@ If a monitor is disconnected, anything that was on it moves to your main screen.
 
 Game Overlay is a set of ordinary always-on-top windows. **It never touches, reads the memory of, or injects into any game**, so it can't trigger anti-cheat. The EXP tracker only looks at what's on your screen, like taking a screenshot.
 
-On Windows, some games use "exclusive fullscreen", and no normal window can appear on top of that (and the EXP tracker can't see the game either). If you can't see the overlay in a game, set the game's display mode to **borderless** or **windowed fullscreen**.
+On Windows, some games use "exclusive fullscreen", and no normal window can appear on top of that (and the EXP tracker can't see the game either). If you can't see the overlay in a game, set the game's display mode to **borderless** or **windowed fullscreen** (not a plain window, which the EXP tracker can't find yet).
 
 **On Windows:** if your keys don't go back to the game after you deactivate the meowdb panel, click the game once. Please report it if that happens.
 

@@ -104,17 +104,24 @@ function createSessionMachine({ autoStart = true, onSave }) {
     }
   }
 
+  // Forget the EXP baseline (the bar was lost: another character may come back), so the next
+  // reading starts fresh instead of counting the difference.
+  function forgetExp() {
+    lastExp = null;
+  }
+
   function sample({ t, verdict, map }) {
     onMapRead(map, t);
     if (status === 'tracking' && lastSampleT !== null) session.trainingMs += t - lastSampleT;
     lastSampleT = t;
-    if (!verdict || (verdict.status !== 'ok' && verdict.status !== 'levelup')) return;
+    if (!verdict || !['ok', 'levelup', 'rebase'].includes(verdict.status)) return;
 
+    // A rebase replaces a baseline that turned out wrong: the jump to it is no gain or loss.
     let delta = null;
     if (verdict.status === 'levelup' && lastExp !== null) {
       delta = midpoint(verdict.previousRequired) - lastExp + verdict.exp;
       if (session) session.levelUps += 1;
-    } else if (lastExp !== null) {
+    } else if (verdict.status === 'ok' && lastExp !== null) {
       delta = verdict.exp - lastExp;
     }
     lastExp = verdict.exp;
@@ -140,6 +147,7 @@ function createSessionMachine({ autoStart = true, onSave }) {
   return {
     sample,
     tick,
+    forgetExp,
     start,
     stop(t) {
       end(t);
