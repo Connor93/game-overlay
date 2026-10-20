@@ -8,6 +8,7 @@ const { loadHistory, saveHistory, renameSession, deleteSession } = require('../e
 const { createValidator } = require('../../shared/exp/validator');
 const { createSessionMachine } = require('../../shared/exp/session');
 const { sessionStats, summarizeHistory } = require('../../shared/exp/stats');
+const img = require('../exp/image');
 
 const SAMPLE_MS = 4000;
 const READ_MAP_EVERY = 3; // ticks
@@ -84,12 +85,17 @@ function create(ctx) {
     return (regions && displays.find((d) => d.id === regions.displayId)) || screen.getPrimaryDisplay();
   }
 
-  // Our own windows (other panels, the clock) can sit over the game's text; don't read through them.
-  function coveredByOurWindows(rect, display) {
+  // Our visible windows (panels, the clock) on a display, in that display's capture pixels.
+  function ourWindowRects(display) {
     const s = display.scaleFactor;
-    const onScreen = { x: display.bounds.x + rect.x / s, y: display.bounds.y + rect.y / s, width: rect.width / s, height: rect.height / s };
-    return BrowserWindow.getAllWindows().some((w) => w !== win && !w.isDestroyed() && w.isVisible() && overlaps(onScreen, w.getBounds()));
+    return BrowserWindow.getAllWindows()
+      .filter((w) => !w.isDestroyed() && w.isVisible())
+      .map((w) => w.getBounds())
+      .map((b) => ({ x: (b.x - display.bounds.x) * s, y: (b.y - display.bounds.y) * s, width: b.width * s, height: b.height * s }));
   }
+
+  // Our own windows can sit over the game's text; don't read through them.
+  const coveredByOurWindows = (rect, display) => ourWindowRects(display).some((r) => overlaps(rect, r));
 
   async function locate() {
     // Try each display in turn until the EXP bar turns up.
@@ -99,6 +105,8 @@ function create(ctx) {
       const display = displays[(start + 1 + i) % displays.length];
       capture.setDisplay(display.id);
       const frame = (await capture.grab(null)).parts[0];
+      // Our overlays often sit in the black bars beside the game; blank them so they don't look like game.
+      for (const r of ourWindowRects(display)) img.fillRect(frame, r, 0);
       const found = await reader.locate(frame);
       if (found) {
         ctx.saveSettings({ regions: { displayId: display.id, ...found } });
@@ -133,7 +141,7 @@ function create(ctx) {
 
     let verdict = null;
     if (parts[0]) {
-      const reading = await reader.readExp(parts[0], { exp: local(parts[0], regions.exp), textHeight: regions.textHeight });
+      const reading = await reader.readExp(parts[0], { exp: local(parts[0], regions.exp), textHeight: regions.textHeight, scale: regions.scale });
       if (reading) {
         misses = 0;
         verdict = validator.accept(reading);
@@ -144,7 +152,10 @@ function create(ctx) {
         ctx.saveSettings({ regions: null });
       }
     }
-    const map = parts[1] ? await reader.readMap(parts[1], { map: local(parts[1], regions.map), textHeight: regions.textHeight }) : null;
+    // A map name only counts when the EXP bar read too: proof the game itself is on screen, not
+    // some other window whose text happens to sit where the minimap would be.
+    const map =
+      parts[1] && verdict ? await reader.readMap(parts[1], { map: local(parts[1], regions.map), textHeight: regions.textHeight }) : null;
 
     machine.sample({ t, verdict, map });
     machine.tick(t);

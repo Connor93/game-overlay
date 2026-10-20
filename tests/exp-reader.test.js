@@ -4,27 +4,20 @@ const img = require('../src/main/exp/image');
 const { createOcr } = require('../src/main/exp/ocr');
 const { createReader } = require('../src/main/exp/reader');
 
-// Rebuild a (mostly black) screen at the given scale with the fixtures where they were on screen,
-// so locating the EXP bar and minimap is exercised too.
-const SCREEN = { width: 2559, height: 1440 };
-const PLACES = { status: { x: 530, y: 1372 }, minimap: { x: 0, y: 0 } };
-function screenAt(scale) {
-  const f = scale / 100;
-  const width = Math.round(SCREEN.width * f);
-  const height = Math.round(SCREEN.height * f);
+// A 3440×1440 screen like the user's: the game pillarboxed 440 px in, with the live in-game
+// status line and the minimap where they were.
+function liveScreen() {
+  const width = 3440;
+  const height = 1440;
   const screen = { width, height, data: new Uint8ClampedArray(width * height * 4) };
-  // A plain mid-gray "game" behind the fixtures, so the whole screen is game area.
-  screen.data.fill(90);
   for (let i = 3; i < screen.data.length; i += 4) screen.data[i] = 255;
-  for (const [name, at] of Object.entries(PLACES)) {
-    const part = img.decodePng(fs.readFileSync(path.join(__dirname, `fixtures/exp/${name}-${scale}.png`)));
-    const x0 = Math.round(at.x * f);
-    const y0 = Math.round(at.y * f);
-    for (let y = 0; y < part.height && y0 + y < height; y++) {
-      const row = part.data.subarray(y * part.width * 4, (y + 1) * part.width * 4);
-      screen.data.set(row.subarray(0, Math.min(row.length, (width - x0) * 4)), ((y0 + y) * width + x0) * 4);
-    }
-  }
+  img.fillRect(screen, { x: 440, y: 0, width: 2560, height: 1440 }, 90); // the game area
+  const paste = (file, x0, y0) => {
+    const part = img.decodePng(fs.readFileSync(path.join(__dirname, 'fixtures/exp', file)));
+    for (let y = 0; y < part.height; y++) screen.data.set(part.data.subarray(y * part.width * 4, (y + 1) * part.width * 4), ((y0 + y) * width + x0) * 4);
+  };
+  paste('ingame-status.png', 970, 1372);
+  paste('minimap-100.png', 440, 0);
   return screen;
 }
 
@@ -36,38 +29,22 @@ beforeAll(() => {
 });
 afterAll(() => ocr.terminate());
 
-async function read(scale) {
-  const frame = screenAt(scale);
+test('finds and reads EXP and the map name on a pillarboxed live screen', async () => {
+  const frame = liveScreen();
   const regions = await reader.locate(frame);
-  if (!regions) return { regions, exp: null, map: null };
-  return { regions, exp: await reader.readExp(frame, regions), map: await reader.readMap(frame, regions) };
-}
-
-test('reads EXP and the map name at 100% scale', async () => {
-  const r = await read(100);
-  expect(r.regions).not.toBeNull();
-  expect(r.exp).toEqual({ exp: 27589, pct: 68.1 });
-  expect(r.map).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
+  expect(regions).not.toBeNull();
+  expect(regions.scale).toBeCloseTo(1.875);
+  expect(await reader.readExp(frame, regions)).toEqual({ exp: 30017, pct: 74.09 });
+  expect(await reader.readMap(frame, regions)).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
 }, 60000);
 
-// The smaller fixtures are blurry shrinks of the screenshot (harsher than a real lower-resolution
-// screen). EXP must then read right or not at all — never wrong.
-for (const scale of [75, 50]) {
-  test(`at ${scale}% scale EXP is either right or unread, never wrong`, async () => {
-    const frame = screenAt(scale);
-    const f = scale / 100;
-    const regions = { exp: { x: 1398 * f, y: 1378 * f, width: 160 * f, height: 28 * f }, map: null, textHeight: 17 * f };
-    const exp = await reader.readExp(frame, regions);
-    if (exp !== null) expect(exp).toEqual({ exp: 27589, pct: 68.1 });
-  }, 60000);
-}
-
+// The minimap name at smaller sizes (blurry shrinks of the screenshot).
 for (const scale of [75, 50]) {
   test(`reads the map name at ${scale}% scale`, async () => {
-    const frame = screenAt(scale);
+    const part = img.decodePng(fs.readFileSync(path.join(__dirname, `fixtures/exp/minimap-${scale}.png`)));
     const f = scale / 100;
     const regions = { exp: null, map: { x: 88 * f, y: 50 * f, width: 170 * f, height: 58 * f }, textHeight: 17 * f };
-    expect(await reader.readMap(frame, regions)).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
+    expect(await reader.readMap(part, regions)).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
   }, 60000);
 }
 

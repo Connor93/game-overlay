@@ -130,7 +130,7 @@ test('EXP section is validated and clamped', () => {
   expect(s.size).toEqual({ width: 220, height: 200 });
 });
 test('cached EXP regions are kept only when well-formed', () => {
-  const good = { displayId: 2, exp: { x: 1, y: 2, width: 30, height: 10 }, map: null, textHeight: 16 };
+  const good = { displayId: 2, exp: { x: 1, y: 2, width: 30, height: 10 }, map: null, textHeight: 16, scale: 1.875 };
   expect(normalizeSettings({ exp: { regions: good } }).exp.regions).toEqual(good);
   expect(normalizeSettings({ exp: { regions: { displayId: 2, exp: { x: 'a' } } } }).exp.regions).toBeNull();
   expect(normalizeSettings({ exp: { regions: { ...good, map: { x: 0, y: 0, width: 5, height: 5 } } } }).exp.regions.map).toEqual({ x: 0, y: 0, width: 5, height: 5 });

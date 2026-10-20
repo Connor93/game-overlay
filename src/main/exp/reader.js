@@ -4,13 +4,9 @@
 // EXP there actually reads.
 
 const img = require('./image');
-const { parseExpText, parseMapName } = require('../../shared/exp/parse');
-const { readExpNumbers } = require('./digits');
+const { parseMapName } = require('../../shared/exp/parse');
+const { readExpNumbers, scaleForGameHeight } = require('./digits');
 
-const EXP_WHITELIST = '0123456789,.[]%';
-const TARGET_TEXT_PX = 60; // upscale crops until text is about this tall
-const EXP_VARIANTS = [{ threshold: 110 }, { threshold: 130 }, { threshold: null }];
-const VOTES_NEEDED = 2;
 const LABEL_SEARCH_SCALES = [1, 1.5, 2];
 const MAP_SCALE_TARGET = 4; // the map name reads best at about 4× its 100% size
 
@@ -26,30 +22,9 @@ const REF = {
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
 function createReader(ocr) {
-  // Read the EXP numbers. Two independent methods must agree — OCR (itself voting across several
-  // preprocessing variants) and digit-shape matching: better no reading than a wrong one.
+  // EXP numbers come from digit-shape matching (see digits.js); OCR misreads this pixel font.
   async function readExp(frame, regions) {
-    const crop = img.crop(frame, regions.exp);
-    const shapes = readExpNumbers(crop);
-    if (!shapes) return null;
-    const ocrReading = await readExpOcr(crop, regions.textHeight);
-    return ocrReading && ocrReading.exp === shapes.exp && ocrReading.pct === shapes.pct ? ocrReading : null;
-  }
-
-  async function readExpOcr(crop, textHeight) {
-    const scale = clamp(Math.round(TARGET_TEXT_PX / textHeight), 2, 8);
-    const base = img.invert(img.toGray(img.scaleNearest(crop, scale)));
-    const votes = new Map();
-    for (const variant of EXP_VARIANTS) {
-      const prepared = img.pad(variant.threshold ? img.threshold(base, variant.threshold) : base, 20);
-      const reading = parseExpText(await ocr.recognizeLine(img.encodePng(prepared), { whitelist: EXP_WHITELIST }));
-      if (!reading) continue;
-      const key = `${reading.exp}|${reading.pct}`;
-      const count = (votes.get(key) || 0) + 1;
-      votes.set(key, count);
-      if (count >= VOTES_NEEDED) return reading;
-    }
-    return null;
+    return readExpNumbers(img.crop(frame, regions.exp), regions.scale);
   }
 
   async function readMap(frame, regions) {
@@ -81,7 +56,7 @@ function createReader(ocr) {
     if (!game) return null;
     const u = game.height / REF.height;
     const at = (r) => ({ x: game.x + r.x * u, y: game.y + r.y * u, width: r.width * u, height: r.height * u });
-    const regions = { exp: at(REF.exp), map: at(REF.map), textHeight: REF.textHeight * u };
+    const regions = { exp: at(REF.exp), map: at(REF.map), textHeight: REF.textHeight * u, scale: scaleForGameHeight(game.height) };
     if (await readExp(frame, regions)) return regions;
     const exp = await findExpLabel(frame, game, u);
     if (exp && (await readExp(frame, { ...regions, exp }))) return { ...regions, exp };

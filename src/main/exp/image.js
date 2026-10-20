@@ -89,6 +89,20 @@ function pad(img, px, value = 255) {
   return out;
 }
 
+// Paint a rectangle (e.g. to blank out our own overlay windows before measuring the game).
+function fillRect(img, rect, value = 0) {
+  const x0 = Math.max(0, Math.floor(rect.x));
+  const y0 = Math.max(0, Math.floor(rect.y));
+  const x1 = Math.min(img.width, Math.ceil(rect.x + rect.width));
+  const y1 = Math.min(img.height, Math.ceil(rect.y + rect.height));
+  for (let y = y0; y < y1; y++)
+    for (let x = x0; x < x1; x++) {
+      const i = (y * img.width + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = value;
+    }
+  return img;
+}
+
 // The game can be pillarboxed (black bars). Bounds = rows/columns with some non-black content.
 function findGameBounds(img, { minLuminance = 24, minShare = 0.02 } = {}) {
   const cols = new Uint32Array(img.width);
@@ -202,4 +216,4 @@ function decodePng(buf) {
   return out;
 }
 
-module.exports = { crop, toGray, invert, threshold, scaleNearest, scaleBox, pad, findGameBounds, encodePng, decodePng };
+module.exports = { crop, toGray, invert, threshold, scaleNearest, scaleBox, pad, fillRect, findGameBounds, encodePng, decodePng };

@@ -66,3 +66,17 @@ test('findGameBounds ignores black bars around the game', () => {
 
 test('findGameBounds on an all-black frame is null', () =>
   expect(img.findGameBounds(make(10, 10, () => [0, 0, 0]))).toBeNull());
+
+test('fillRect blanks a region (clamped to the image)', () => {
+  const a = make(4, 4, () => [200, 200, 200]);
+  img.fillRect(a, { x: 2, y: 2, width: 10, height: 10 });
+  expect(px(a, 1, 1)).toEqual([200, 200, 200, 255]);
+  expect(px(a, 3, 3)).toEqual([0, 0, 0, 255]);
+});
+
+test('findGameBounds ignores overlays once they are blanked out', () => {
+  const a = make(100, 50, (x, y) => (x >= 20 && x < 80 ? [120, 140, 160] : x >= 85 && y < 20 ? [255, 255, 255] : [0, 0, 0]));
+  expect(img.findGameBounds(a).width).toBe(80); // the overlay in the right bar widens it (20..99)…
+  img.fillRect(a, { x: 85, y: 0, width: 15, height: 20 });
+  expect(img.findGameBounds(a)).toEqual({ x: 20, y: 0, width: 60, height: 50 }); // …until blanked
+});

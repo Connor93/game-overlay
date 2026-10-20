@@ -81,7 +81,8 @@ const isRect = (r) => isObject(r) && ['x', 'y', 'width', 'height'].every((k) => 
 
 function normalizeRegions(raw) {
   if (!isObject(raw) || !isNumber(raw.displayId) || !isRect(raw.exp) || !isNumber(raw.textHeight)) return null;
-  return { displayId: raw.displayId, exp: { ...raw.exp }, map: isRect(raw.map) ? { ...raw.map } : null, textHeight: raw.textHeight };
+  if (!isNumber(raw.scale) || raw.scale <= 0) return null;
+  return { displayId: raw.displayId, exp: { ...raw.exp }, map: isRect(raw.map) ? { ...raw.map } : null, textHeight: raw.textHeight, scale: raw.scale };
 }
 
 function normalizeExp(raw) {
