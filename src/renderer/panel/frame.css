@@ -1,58 +1,4 @@
-:root {
-  --highlight: #ff9f0a;
-  --bar: rgba(28, 28, 30, 0.96);
-  --text: #f5f5f7;
-  --muted: #98989d;
-}
-
-html, body {
-  margin: 0;
-  height: 100%;
-  background: transparent;
-  overflow: hidden;
-  user-select: none;
-  font: 12px -apple-system, "Segoe UI", sans-serif;
-  color: var(--text);
-}
-
-#border {
-  position: fixed;
-  inset: 0;
-  border: 4px solid transparent;
-  border-radius: 8px;
-  pointer-events: none;
-}
-body.active #border { border-color: var(--highlight); }
-
-/* Toolbar (32px) and status bar (12px) only exist while active; the main process lays meowdb out between them. */
-#toolbar, #statusbar { display: none; }
-body.active #toolbar {
-  position: fixed;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 6px;
-  box-sizing: border-box;
-  background: var(--bar);
-  -webkit-app-region: drag; /* drag the bar to move the panel */
-}
-body.active #statusbar {
-  position: fixed;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  padding: 0 6px;
-  background: var(--bar);
-}
-.hint { color: var(--muted); font-size: 9px; }
-
+/* meowdb panel: toolbar buttons and the load-error card. Shared panel look is in panel-shell. */
 #toolbar button, #error button {
   -webkit-app-region: no-drag;
   font: inherit;
@@ -69,15 +15,6 @@ body.active #statusbar {
 #toolbar button:hover { background: rgba(255, 255, 255, 0.12); }
 #toolbar button:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
 .title { margin-left: 6px; color: var(--muted); }
-#tag {
-  margin-left: auto;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--highlight);
-  color: #000;
-  font-weight: 700;
-  font-size: 11px;
-}
 
 #error {
   position: fixed;
@@ -96,9 +33,3 @@ body.active #error { top: 36px; bottom: 16px; }
 #error p { margin: 0; }
 #errorText { color: var(--muted); max-width: 80%; }
 #error button { width: auto; padding: 4px 14px; margin-top: 8px; font-size: 13px; background: rgba(255, 255, 255, 0.12); }
-
-.resize { position: fixed; display: none; -webkit-app-region: no-drag; }
-body.active .resize { display: block; }
-.resize[data-edge="right"] { top: 36px; right: 0; bottom: 16px; width: 6px; cursor: ew-resize; }
-.resize[data-edge="bottom"] { left: 4px; right: 16px; bottom: 0; height: 8px; cursor: ns-resize; }
-.resize[data-edge="corner"] { right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; }
