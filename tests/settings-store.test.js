@@ -15,12 +15,19 @@ test('keeps valid fields, drops invalid ones', () => {
   expect(s.outlineWidth).toBe(3);
 });
 test('clamps ranges', () => {
-  const s = normalizeSettings({ fontSize: 9999, outlineWidth: -4, opacity: 0, position: { displayId: 5, relX: 3, relY: -1 } });
+  const s = normalizeSettings({ fontSize: 9999, outlineWidth: -4, opacity: 0 });
   expect(s.fontSize).toBe(400);
   expect(s.outlineWidth).toBe(0);
   expect(s.opacity).toBe(0.1);
-  expect(s.position).toEqual({ displayId: 5, relX: 1, relY: 0 });
 });
+test('keeps a valid position and rejects bad anchors and negative offsets', () => {
+  expect(normalizeSettings({ position: { displayId: 5, anchorX: 'left', offsetX: 7, anchorY: 'bottom', offsetY: 0 } }).position)
+    .toEqual({ displayId: 5, anchorX: 'left', offsetX: 7, anchorY: 'bottom', offsetY: 0 });
+  expect(normalizeSettings({ position: { anchorX: 'middle', offsetX: -3 } }).position).toEqual(DEFAULT_SETTINGS.position);
+});
+test('older relX/relY positions keep their corner', () =>
+  expect(normalizeSettings({ position: { displayId: 2, relX: 0, relY: 1 } }).position)
+    .toEqual({ displayId: 2, anchorX: 'left', offsetX: 20, anchorY: 'bottom', offsetY: 20 }));
 test('missing file gives defaults', () => expect(loadSettings(tmp())).toEqual(DEFAULT_SETTINGS));
 test('corrupt file gives defaults', () => {
   const f = tmp();

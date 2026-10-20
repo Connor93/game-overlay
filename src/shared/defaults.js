@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   shortcutToggleLock: 'Control+Alt+C',
   shortcutToggleHide: 'Control+Alt+H',
   openAtLogin: false,
-  position: Object.freeze({ displayId: null, relX: 1, relY: 0 }),
+  position: Object.freeze({ displayId: null, anchorX: 'right', offsetX: 20, anchorY: 'top', offsetY: 20 }),
 });
 
 module.exports = { DEFAULT_SETTINGS };

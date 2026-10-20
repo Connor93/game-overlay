@@ -1,6 +1,6 @@
 const path = require('path');
 const { BrowserWindow, ipcMain, screen } = require('electron');
-const { resolvePlacement, relativeFromBounds } = require('./placement');
+const { resolvePlacement, positionFromBounds } = require('./placement');
 
 const TOP_LEVEL = 'screen-saver';
 const REASSERT_TOP_MS = 2000;
@@ -69,7 +69,7 @@ function createOverlay(getSettings, onPositionChange) {
 
   const currentPosition = () => {
     const bounds = win.getBounds();
-    return relativeFromBounds(bounds, toDisplayInfo(screen.getDisplayMatching(bounds)));
+    return positionFromBounds(bounds, toDisplayInfo(screen.getDisplayMatching(bounds)));
   };
 
   // Save as soon as a drag ends, so quitting while unlocked keeps the new spot.

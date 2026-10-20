@@ -17,12 +17,20 @@ const COLORS = ['color', 'outlineColor'];
 const STRINGS = ['fontFamily', 'shortcutToggleLock', 'shortcutToggleHide'];
 const BOOLEANS = ['showSeconds', 'hour12', 'openAtLogin'];
 
+const MAX_OFFSET = 10000;
+const OLD_MARGIN = 20;
+
 function normalizePosition(raw) {
   const pos = { ...DEFAULT_SETTINGS.position };
   if (!isObject(raw)) return pos;
   if (raw.displayId === null || isNumber(raw.displayId)) pos.displayId = raw.displayId;
-  if (isNumber(raw.relX)) pos.relX = clamp(raw.relX, 0, 1);
-  if (isNumber(raw.relY)) pos.relY = clamp(raw.relY, 0, 1);
+  // Version 0.1.0 stored relX/relY (0..1); keep the corner it was nearest to.
+  if (isNumber(raw.relX)) Object.assign(pos, { anchorX: raw.relX >= 0.5 ? 'right' : 'left', offsetX: OLD_MARGIN });
+  if (isNumber(raw.relY)) Object.assign(pos, { anchorY: raw.relY >= 0.5 ? 'bottom' : 'top', offsetY: OLD_MARGIN });
+  if (raw.anchorX === 'left' || raw.anchorX === 'right') pos.anchorX = raw.anchorX;
+  if (raw.anchorY === 'top' || raw.anchorY === 'bottom') pos.anchorY = raw.anchorY;
+  if (isNumber(raw.offsetX) && raw.offsetX >= 0) pos.offsetX = Math.min(raw.offsetX, MAX_OFFSET);
+  if (isNumber(raw.offsetY) && raw.offsetY >= 0) pos.offsetY = Math.min(raw.offsetY, MAX_OFFSET);
   return pos;
 }
 

@@ -1,24 +1,16 @@
-const MARGIN = 20;
+// Position is stored as a distance from the nearest corner of the display's work area, so the
+// clock can sit anywhere (flush to an edge included), a right-anchored clock grows leftward,
+// and the same spot carries over to a different-sized display.
 
-const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-// Room the window can travel along one axis inside the margins (negative = doesn't fit).
-const travel = (available, length) => available - length - 2 * MARGIN;
-
-function axisStart(start, available, length, rel) {
-  const range = travel(available, length);
-  if (range < 0) return start; // too big for the margins: pin to the edge so most of it stays visible
-  return Math.round(start + MARGIN + rel * range);
+function axisStart(start, available, length, anchorAtEnd, offset) {
+  const room = available - length;
+  if (room < 0) return start; // too big for the screen: pin to the edge so most of it stays visible
+  const o = clamp(offset, 0, room);
+  return Math.round(anchorAtEnd ? start + room - o : start + o);
 }
 
-function axisRel(start, available, length, pos) {
-  const range = travel(available, length);
-  if (range <= 0) return 0;
-  return clamp01((pos - start - MARGIN) / range);
-}
-
-// Position is stored relative to the display, so relX = 1 keeps the right edge pinned
-// as the clock grows, and the same spot carries over to a different-sized display.
 function resolvePlacement(position, displays, size) {
   const display =
     (position.displayId !== null && displays.find((d) => d.id === position.displayId)) ||
@@ -26,19 +18,28 @@ function resolvePlacement(position, displays, size) {
     displays[0];
   const wa = display.workArea;
   return {
-    x: axisStart(wa.x, wa.width, size.width, position.relX),
-    y: axisStart(wa.y, wa.height, size.height, position.relY),
+    x: axisStart(wa.x, wa.width, size.width, position.anchorX === 'right', position.offsetX),
+    y: axisStart(wa.y, wa.height, size.height, position.anchorY === 'bottom', position.offsetY),
     displayId: display.id,
   };
 }
 
-function relativeFromBounds(bounds, display) {
+// Anchor to whichever edge the window's center is closer to, measured in pixels from that edge.
+function positionFromBounds(bounds, display) {
   const wa = display.workArea;
+  const roomX = Math.max(0, wa.width - bounds.width);
+  const roomY = Math.max(0, wa.height - bounds.height);
+  const left = bounds.x - wa.x;
+  const top = bounds.y - wa.y;
+  const right = bounds.x + bounds.width / 2 > wa.x + wa.width / 2;
+  const bottom = bounds.y + bounds.height / 2 > wa.y + wa.height / 2;
   return {
     displayId: display.id,
-    relX: axisRel(wa.x, wa.width, bounds.width, bounds.x),
-    relY: axisRel(wa.y, wa.height, bounds.height, bounds.y),
+    anchorX: right ? 'right' : 'left',
+    offsetX: Math.round(clamp(right ? roomX - left : left, 0, roomX)),
+    anchorY: bottom ? 'bottom' : 'top',
+    offsetY: Math.round(clamp(bottom ? roomY - top : top, 0, roomY)),
   };
 }
 
-module.exports = { MARGIN, resolvePlacement, relativeFromBounds };
+module.exports = { resolvePlacement, positionFromBounds };
