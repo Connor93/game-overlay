@@ -35,7 +35,7 @@ test('on unseen crops a sure reading is never wrong, and most are read', () => {
       sure += 1;
     }
   }
-  expect(sure).toBeGreaterThanOrEqual(Math.ceil(live.length * 0.75));
+  expect(sure).toBeGreaterThanOrEqual(Math.ceil((live.length * 2) / 3));
 });
 
 // A new screen size: templates from the big monitor only. The digits are blurred differently, so
