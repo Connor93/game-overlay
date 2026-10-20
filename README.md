@@ -10,9 +10,9 @@ Download the latest version from the [Releases page](https://github.com/Connor93
 
 | System | File |
 | --- | --- |
-| macOS (Apple Silicon or Intel) | `Overlay Clock-<version>-universal.dmg` |
-| Windows (installer) | `Overlay Clock Setup <version>.exe` |
-| Windows (no install, run directly) | `Overlay Clock <version>.exe` |
+| macOS (Apple Silicon or Intel) | `Overlay-Clock-<version>-universal.dmg` |
+| Windows (installer) | `Overlay-Clock-Setup-<version>.exe` |
+| Windows (no install, run directly) | `Overlay-Clock-<version>.exe` |
 
 ### First launch
 
