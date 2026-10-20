@@ -59,6 +59,31 @@ for (const scale of [75, 50]) {
   }, 60000);
 }
 
+// One of our panels over the game's left side, blanked out before locating (as the app does): the
+// game's left edge can't be seen, but its height, right edge and the EXP bracket still place it.
+test('finds EXP with the left of the game hidden behind one of our panels', async () => {
+  const game = { x: 10, y: 200, width: 2690, height: 1440 };
+  const frame = liveScreen({ width: 2700, height: 1640, chrome: 80, game });
+  img.fillRect(frame, { x: 0, y: 0, width: 700, height: 1640 }, 0);
+  const regions = await reader.locate(frame);
+  expect(regions).not.toBeNull();
+  expect(await reader.readExp(frame, regions)).toEqual({ exp: 30017, pct: 74.09, sure: true });
+  expect(regions.map.x).toBeCloseTo(game.x + 88, -1); // where the minimap would be
+}, 60000);
+
+// When the game's left edge is visible it is exact; the bracket's estimate is only good to a few
+// pixels, and the minimap name starts close to its crop's edge.
+test('with the game fully visible the minimap is placed from its left edge exactly', async () => {
+  const game = { x: 10, y: 200, width: 2690, height: 1440 };
+  const frame = liveScreen({ width: 2700, height: 1640, chrome: 80, game });
+  // Nudge the status bar a few pixels off centre, as a real game's is relative to our estimate.
+  const shifted = { ...frame, data: new Uint8ClampedArray(frame.data) };
+  const bar = img.crop(frame, { x: 0, y: game.y + 1372, width: 2700, height: 40 });
+  for (let y = 0; y < 40; y++) shifted.data.set(bar.data.subarray(y * 2700 * 4, (y * 2700 + 2690) * 4), ((game.y + 1372 + y) * 2700 + 8) * 4);
+  const regions = await reader.locate(shifted);
+  expect(regions.map.x).toBe(game.x + 88);
+}, 60000);
+
 // The minimap on the user's laptop (a 1890-pixel-tall game): the name starts close to the crop's
 // edge, where the first letter used to get lost ("ver the Wall").
 test('reads the map name on the laptop', async () => {

@@ -5,11 +5,11 @@
 
 const img = require('./image');
 const { parseMapName } = require('../../shared/exp/parse');
-const { readExpNumbers, scaleForGameHeight } = require('./digits');
+const { readExpNumbers, scaleForGameHeight, findBrackets } = require('./digits');
 
-const LABEL_SEARCH_SCALES = [1, 1.5, 2];
 const MAP_SCALE_TARGET = 4; // the map name reads best at about 4× its 100% size
 const MAP_PADDING = 4; // pixels at 100% size
+const LEFT_EDGE_TOLERANCE = 40; // the bracket's estimate of the left edge is good to about this
 
 function medianGray(gray) {
   const values = [];
@@ -26,6 +26,7 @@ const REF = {
   // The numbers after "EXP", with room to either side: the digit reader anchors on the green "["
   // and grows leftwards from it. Starts just right of the MP line's "]", ends before the Cash Shop.
   exp: { x: 1375, y: 1378, width: 230, height: 28 },
+  expBracketX: 1474, // the "[" after the EXP number
   map: { x: 88, y: 50, width: 170, height: 58 }, // street + map name in the minimap
   textHeight: 17,
 };
@@ -55,33 +56,27 @@ function createReader(ocr) {
     return best && parseMapName(best.lines.map((l) => l.text));
   }
 
-  // Fallback when the layout isn't the expected one: find the word "EXP" along the bottom and
-  // read just to its right. (OCR word boxes are only reliable horizontally here: the box runs
-  // down into the EXP gauge below the text.)
-  async function findExpLabel(frame, game, u) {
-    const strip = { x: game.x, y: game.y + game.height * 0.88, width: game.width, height: game.height * 0.12 };
-    for (const scale of LABEL_SEARCH_SCALES) {
-      const words = await ocr.recognizeWords(img.encodePng(img.scaleNearest(img.toGray(img.crop(frame, strip)), scale)));
-      const label = words.find((w) => /^EXP/i.test(w.text));
-      if (label) {
-        const right = strip.x + label.bbox.x1 / scale;
-        const bottom = strip.y + label.bbox.y1 / scale;
-        return { x: right, y: bottom - 34 * u, width: REF.exp.width * u, height: REF.exp.height * u };
-      }
-    }
-    return null;
-  }
-
+  // The game's height (from its bounds) gives the scale and the status bar's row. Along that row,
+  // the green bracket that reads as EXP places the status bar, which is centred in the game; with
+  // the game's right edge that estimates its left edge too, where the minimap is. The measured left
+  // edge is exact, so it wins unless it is clearly off: one of our panels hiding (blanked over) the
+  // left of the game.
   async function locate(frame) {
     const game = img.findGameBounds(frame);
     if (!game) return null;
     const u = game.height / REF.height;
-    const at = (r, x0) => ({ x: x0 + r.x * u, y: game.y + r.y * u, width: r.width * u, height: r.height * u });
-    const centre = game.x + game.width / 2 - (REF.width / 2) * u;
-    const regions = { exp: at(REF.exp, centre), map: at(REF.map, game.x), textHeight: REF.textHeight * u, scale: scaleForGameHeight(game.height) };
-    if (await readExp(frame, regions)) return regions;
-    const exp = await findExpLabel(frame, game, u);
-    if (exp && (await readExp(frame, { ...regions, exp }))) return { ...regions, exp };
+    const scale = scaleForGameHeight(game.height);
+    const row = { x: game.x, y: game.y + REF.exp.y * u, width: game.width, height: REF.exp.height * u };
+    for (const bracket of findBrackets(img.crop(frame, row), scale)) {
+      const bracketX = row.x + bracket.x;
+      const exp = { x: bracketX - (REF.expBracketX - REF.exp.x) * u, y: row.y, width: REF.exp.width * u, height: row.height };
+      if (!(await readExp(frame, { exp, scale }))) continue;
+      const centre = bracketX - (REF.expBracketX - REF.width / 2) * u;
+      const estimate = 2 * centre - (game.x + game.width);
+      const left = Math.abs(estimate - game.x) <= LEFT_EDGE_TOLERANCE * u ? game.x : estimate;
+      const map = { x: left + REF.map.x * u, y: game.y + REF.map.y * u, width: REF.map.width * u, height: REF.map.height * u };
+      return { exp, map, textHeight: REF.textHeight * u, scale };
+    }
     return null;
   }
 

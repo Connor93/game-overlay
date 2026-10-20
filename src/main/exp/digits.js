@@ -49,21 +49,29 @@ function textThreshold(values) {
   return bright - median < 40 ? null : (median + bright) / 2;
 }
 
-// The "[": the leftmost column with a tall run of green that stops short of the crop's bottom
-// (the EXP gauge below is green too, but it is a wide band along the bottom).
-function findBracket(img, scale) {
+// Green brackets: each tall run of green that stops short of the crop's bottom (the EXP gauge below
+// is green too, but it is a wide band along the bottom), left to right, one per bracket.
+function findBrackets(img, scale) {
+  const found = [];
   for (let x = 0; x < img.width; x++) {
     let run = 0;
-    for (let y = 0; y < img.height; y++) {
+    let hit = null;
+    for (let y = 0; y < img.height && !hit; y++) {
       if (isGreen(img.data, (y * img.width + x) * 4)) run++;
       else if (run) {
-        if (run >= BRACKET_MIN_HEIGHT * scale) return { x, y0: y - run, y1: y - 1 };
+        if (run >= BRACKET_MIN_HEIGHT * scale) hit = { x, y0: y - run, y1: y - 1 };
         run = 0;
       }
     }
+    const last = found[found.length - 1];
+    if (hit && !(last && last.lastX === x - 1)) found.push({ ...hit, lastX: x });
+    else if (hit) last.lastX = x;
   }
-  return null;
+  return found.map(({ lastX, ...b }) => b);
 }
+
+// The "[" of the EXP crop: its leftmost bracket.
+const findBracket = (img, scale) => findBrackets(img, scale)[0] || null;
 
 // Everything decoding needs from a crop: luminance, threshold, text rows and the bracket.
 function prepare(img, scale) {
@@ -232,4 +240,4 @@ function buildTemplates(samples) {
 
 const scaleForGameHeight = (gameHeight) => gameHeight / NATIVE_HEIGHT;
 
-module.exports = { readExpNumbers, decode, buildTemplates, scaleForGameHeight, luminanceGrid, textThreshold, findBracket, GRID_W, GRID_H };
+module.exports = { readExpNumbers, decode, buildTemplates, scaleForGameHeight, luminanceGrid, textThreshold, findBracket, findBrackets, GRID_W, GRID_H };
