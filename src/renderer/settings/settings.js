@@ -42,13 +42,24 @@ function renderDisplays(displays) {
   if (current) select.value = String(current.id);
 }
 
-async function update(patch) {
-  const result = await api.update(patch);
-  settings = result.settings;
+function renderShortcutErrors(errors) {
   for (const id of ['shortcutToggleLock', 'shortcutToggleHide']) {
-    $(`${id}Error`).textContent = result.shortcutErrors.includes(id) ? "Couldn't use that shortcut (in use or not allowed)" : '';
+    $(`${id}Error`).textContent = errors.includes(id) ? "Couldn't use that shortcut (in use or not allowed)" : '';
   }
+}
+
+function applyResult(result) {
+  settings = result.settings;
+  renderShortcutErrors(result.shortcutErrors);
   render();
+}
+
+async function update(patch) {
+  try {
+    applyResult(await api.update(patch));
+  } catch (err) {
+    console.error('Could not update settings', err);
+  }
 }
 
 function bind() {
@@ -102,16 +113,13 @@ function bind() {
   }
 
   $('reset').addEventListener('click', async () => {
-    const result = await api.reset();
-    settings = result.settings;
     $('fontFamily').blur();
-    render();
+    applyResult(await api.reset());
   });
 }
 
-api.get().then(({ settings: s, displays }) => {
-  settings = s;
-  render();
+api.get().then(({ settings: s, shortcutErrors, displays }) => {
+  applyResult({ settings: s, shortcutErrors });
   renderDisplays(displays);
   bind();
 });

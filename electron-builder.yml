@@ -24,4 +24,4 @@ nsis:
   oneClick: true
 publish:
   provider: github
-  releaseType: release
+  releaseType: draft # uploads into the draft the workflow creates; a later job publishes it

@@ -2,10 +2,14 @@ const path = require('path');
 const { BrowserWindow, ipcMain, session } = require('electron');
 
 // Registers the settings IPC once and returns an `open()` that shows (or focuses) the window.
-function setupSettingsWindow({ getSettings, getDisplays, updateSettings, resetSettings }) {
+function setupSettingsWindow({ getSettings, getShortcutErrors, getDisplays, updateSettings, resetSettings }) {
   let win = null;
 
-  ipcMain.handle('settings:get', () => ({ settings: getSettings(), displays: getDisplays() }));
+  ipcMain.handle('settings:get', () => ({
+    settings: getSettings(),
+    shortcutErrors: getShortcutErrors(),
+    displays: getDisplays(),
+  }));
   ipcMain.handle('settings:update', (_e, patch) => updateSettings(patch));
   ipcMain.handle('settings:reset', () => resetSettings());
 

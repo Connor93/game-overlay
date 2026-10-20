@@ -6,6 +6,9 @@ const { createOverlay } = require('./overlay-window');
 const { registerShortcuts, applyShortcuts } = require('./shortcuts');
 const { createTray } = require('./tray');
 const { setupSettingsWindow } = require('./settings-window');
+const { loginItemSettings } = require('./login-item');
+
+const SAVE_DELAY_MS = 300;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -17,10 +20,24 @@ if (!app.requestSingleInstanceLock()) {
   let settings = loadSettings(settingsPath);
   let overlay;
   let tray;
+  let openSettings;
+  let shortcutErrors = []; // settings fields whose shortcut isn't registered right now
+
+  // Sliders send many changes a second; batch the writes.
+  let saveTimer = null;
+  function saveSoon() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);
+  }
+  function saveNow() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    saveSettings(settingsPath, settings);
+  }
 
   function setPosition(position) {
     settings = { ...settings, position };
-    saveSettings(settingsPath, settings);
+    saveSoon();
   }
 
   const shortcutMap = (s) => ({ toggleLock: s.shortcutToggleLock, toggleHide: s.shortcutToggleHide });
@@ -52,10 +69,12 @@ if (!app.requestSingleInstanceLock()) {
 
   // Apply a full new settings object: shortcuts (with rollback), login item, overlay, display.
   function commitSettings(next) {
-    let shortcutErrors = [];
     const prevShortcuts = shortcutMap(settings);
     const nextShortcuts = shortcutMap(next);
-    if (nextShortcuts.toggleLock !== prevShortcuts.toggleLock || nextShortcuts.toggleHide !== prevShortcuts.toggleHide) {
+    const shortcutsChanged =
+      nextShortcuts.toggleLock !== prevShortcuts.toggleLock || nextShortcuts.toggleHide !== prevShortcuts.toggleHide;
+    // Also retry when something failed before, e.g. the user re-picks a key another app has since released.
+    if (shortcutsChanged || shortcutErrors.length) {
       const { applied, failed } = applyShortcuts(nextShortcuts, prevShortcuts, shortcutHandlers);
       next.shortcutToggleLock = applied.toggleLock;
       next.shortcutToggleHide = applied.toggleHide;
@@ -63,11 +82,11 @@ if (!app.requestSingleInstanceLock()) {
     }
     // In development this would register the bare Electron binary, so only do it in the real app.
     if (app.isPackaged && next.openAtLogin !== settings.openAtLogin) {
-      app.setLoginItemSettings({ openAtLogin: next.openAtLogin });
+      app.setLoginItemSettings(loginItemSettings(next.openAtLogin));
     }
     const displayChanged = next.position.displayId !== settings.position.displayId;
     settings = next;
-    saveSettings(settingsPath, settings);
+    saveSoon();
     overlay.applySettings(settings);
     if (displayChanged) overlay.moveToDisplay(settings.position.displayId);
     return { settings, shortcutErrors };
@@ -85,13 +104,39 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     overlay = createOverlay(() => settings, setPosition);
-    const openSettings = setupSettingsWindow({ getSettings: () => settings, getDisplays, updateSettings, resetSettings });
+    openSettings = setupSettingsWindow({
+      getSettings: () => settings,
+      getShortcutErrors: () => shortcutErrors,
+      getDisplays,
+      updateSettings,
+      resetSettings,
+    });
     tray = createTray({ overlay, openSettings, quit: () => app.quit() });
     const { failed } = registerShortcuts(shortcutMap(settings), shortcutHandlers);
+    shortcutErrors = failed.map((name) => SHORTCUT_FIELDS[name]);
     if (failed.length) console.error(`Could not register shortcuts: ${failed.join(', ')}`);
+    // The user may have removed the login item in the OS; show what's really set.
+    if (app.isPackaged) {
+      settings.openAtLogin = app.getLoginItemSettings(loginItemSettings(settings.openAtLogin)).openAtLogin;
+    }
+  });
+
+  // Launching it again (e.g. from the Start menu when the tray icon is tucked away) brings the clock back.
+  app.on('second-instance', () => {
+    if (!overlay) return;
+    overlay.setHidden(false);
+    tray.refresh();
+    openSettings();
   });
 
   // It's a tray app: closing windows must not quit it.
   app.on('window-all-closed', () => {});
-  app.on('will-quit', () => globalShortcut.unregisterAll());
+  // The overlay isn't closable (see overlay-window.js), so quitting has to destroy it explicitly.
+  app.on('before-quit', () => {
+    if (overlay && !overlay.window.isDestroyed()) overlay.window.destroy();
+  });
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+    if (saveTimer) saveNow();
+  });
 }

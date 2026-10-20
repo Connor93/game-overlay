@@ -18,6 +18,10 @@ function createOverlay(getSettings, onPositionChange) {
     frame: false,
     hasShadow: false,
     resizable: false,
+    // On Windows a drag region acts like a title bar; without these, its right-click menu could close the clock.
+    closable: false,
+    minimizable: false,
+    maximizable: false,
     skipTaskbar: true,
     focusable: false,
     alwaysOnTop: true,
@@ -31,6 +35,7 @@ function createOverlay(getSettings, onPositionChange) {
   win.setAlwaysOnTop(true, TOP_LEVEL);
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true);
+  win.on('system-context-menu', (event) => event.preventDefault());
 
   let locked = true;
   let hidden = false;
@@ -62,9 +67,22 @@ function createOverlay(getSettings, onPositionChange) {
   };
   ipcMain.on('overlay:size', onSize);
 
-  for (const event of ['display-added', 'display-removed', 'display-metrics-changed']) {
-    screen.on(event, place);
-  }
+  const currentPosition = () => {
+    const bounds = win.getBounds();
+    return relativeFromBounds(bounds, toDisplayInfo(screen.getDisplayMatching(bounds)));
+  };
+
+  // Save as soon as a drag ends, so quitting while unlocked keeps the new spot.
+  win.on('moved', () => {
+    if (!locked) onPositionChange(currentPosition());
+  });
+
+  // While unlocked, only re-place when a display goes away; otherwise we'd yank the clock mid-drag.
+  const onDisplayAdded = () => locked && place();
+  const onDisplayMetricsChanged = () => locked && place();
+  screen.on('display-added', onDisplayAdded);
+  screen.on('display-removed', place);
+  screen.on('display-metrics-changed', onDisplayMetricsChanged);
 
   win.webContents.on('did-finish-load', () => {
     win.webContents.send('overlay:settings', getSettings());
@@ -74,9 +92,9 @@ function createOverlay(getSettings, onPositionChange) {
   win.on('closed', () => {
     clearInterval(topTimer);
     ipcMain.removeListener('overlay:size', onSize);
-    for (const event of ['display-added', 'display-removed', 'display-metrics-changed']) {
-      screen.removeListener(event, place);
-    }
+    screen.removeListener('display-added', onDisplayAdded);
+    screen.removeListener('display-removed', place);
+    screen.removeListener('display-metrics-changed', onDisplayMetricsChanged);
   });
 
   win.loadFile(path.join(__dirname, '../renderer/overlay/index.html'));
@@ -84,22 +102,24 @@ function createOverlay(getSettings, onPositionChange) {
   return {
     window: win,
     applySettings(settings) {
+      if (win.isDestroyed()) return;
       win.webContents.send('overlay:settings', settings);
     },
     isLocked: () => locked,
     setLocked(value) {
-      if (value === locked) return;
+      if (value === locked || win.isDestroyed()) return;
       locked = value;
-      if (locked) {
-        const bounds = win.getBounds();
-        onPositionChange(relativeFromBounds(bounds, toDisplayInfo(screen.getDisplayMatching(bounds))));
-        place(); // snap back inside the margins if it was dragged partly off-screen
-      }
+      // Switch click-through first so the clock never ends up "locked" but still catching clicks.
       win.setIgnoreMouseEvents(locked);
       win.webContents.send('overlay:locked', locked);
+      if (locked) {
+        onPositionChange(currentPosition());
+        place(); // snap back inside the margins if it was dragged partly off-screen
+      }
     },
     isHidden: () => hidden,
     setHidden(value) {
+      if (win.isDestroyed()) return;
       hidden = value;
       if (hidden) win.hide();
       else if (size) show();

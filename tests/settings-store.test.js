@@ -34,3 +34,9 @@ test('save then load round-trips', () => {
   expect(loadSettings(f)).toEqual(s);
   expect(fs.existsSync(f + '.tmp')).toBe(false);
 });
+
+test('save failure returns false instead of throwing', () => {
+  const f = path.join(os.tmpdir(), 'oc-missing-dir-' + Date.now(), 'settings.json');
+  expect(saveSettings(f, DEFAULT_SETTINGS)).toBe(false);
+});
+test('save success returns true', () => expect(saveSettings(tmp(), DEFAULT_SETTINGS)).toBe(true));

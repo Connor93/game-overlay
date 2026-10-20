@@ -56,10 +56,17 @@ function loadSettings(filePath) {
 }
 
 // Write to a temp file and rename, so a crash mid-write can't leave a half-written file.
+// Returns false instead of throwing: failing to save (e.g. antivirus holding the file) must never break the app.
 function saveSettings(filePath, settings) {
   const tmp = filePath + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(settings, null, 2));
-  fs.renameSync(tmp, filePath);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2));
+    fs.renameSync(tmp, filePath);
+    return true;
+  } catch (err) {
+    console.error(`Could not save settings: ${err.message}`);
+    return false;
+  }
 }
 
 module.exports = { normalizeSettings, loadSettings, saveSettings };
