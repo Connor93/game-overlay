@@ -39,6 +39,9 @@ function create(ctx) {
       return { canGoBack: history.canGoBack(), canGoForward: history.canGoForward(), loadError };
     },
     focusTarget: () => view.webContents,
+    // The page is its own native view and swallows mouse events over it, so dragging an edge
+    // inward (shrinking) would stall. Hide it while dragging so the panel sees the whole drag.
+    onResizing: (resizing) => view.setVisible(!resizing),
   });
   const { win } = panel;
   win.contentView.addChildView(view);

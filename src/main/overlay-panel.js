@@ -34,7 +34,8 @@ const keepOnTop = (win) => {
 //   layoutContent({ width, height, top, bottom, active })  optional: position child views
 //   extraState() optional: tool fields merged into every state push
 //   focusTarget()  optional: webContents to focus on activate (defaults to the page)
-function createOverlayPanel({ ctx, idPrefix, labels, pageFile, preload, minSize, layoutContent, extraState, focusTarget }) {
+//   onResizing(bool)  optional: called when an edge drag starts/ends
+function createOverlayPanel({ ctx, idPrefix, labels, pageFile, preload, minSize, layoutContent, extraState, focusTarget, onResizing }) {
   const settings = ctx.getSettings;
   let active = false;
   let hidden = settings().startHidden;
@@ -177,6 +178,12 @@ function createOverlayPanel({ ctx, idPrefix, labels, pageFile, preload, minSize,
 
   win.on('moved', () => active && saveBounds());
 
+  let resizing = false;
+  const onResizeStart = (event) => {
+    if (event.sender !== win.webContents || !active || resizing) return;
+    resizing = true;
+    if (onResizing) onResizing(true);
+  };
   const onResize = (event, size) => {
     if (event.sender !== win.webContents || !active) return;
     const { workArea } = screen.getDisplayMatching(win.getBounds());
@@ -185,8 +192,12 @@ function createOverlayPanel({ ctx, idPrefix, labels, pageFile, preload, minSize,
     layout();
   };
   const onResizeEnd = (event) => {
-    if (event.sender === win.webContents && active) saveBounds();
+    if (event.sender !== win.webContents) return;
+    if (resizing && onResizing) onResizing(false);
+    resizing = false;
+    if (active) saveBounds();
   };
+  ipcMain.on(`${idPrefix}:resize-start`, onResizeStart);
   ipcMain.on(`${idPrefix}:resize`, onResize);
   ipcMain.on(`${idPrefix}:resize-end`, onResizeEnd);
 
@@ -197,6 +208,7 @@ function createOverlayPanel({ ctx, idPrefix, labels, pageFile, preload, minSize,
   win.on('closed', () => {
     clearInterval(topTimer);
     app.removeListener('browser-window-blur', onAnyBlur);
+    ipcMain.removeListener(`${idPrefix}:resize-start`, onResizeStart);
     ipcMain.removeListener(`${idPrefix}:resize`, onResize);
     ipcMain.removeListener(`${idPrefix}:resize-end`, onResizeEnd);
     for (const event of DISPLAY_EVENTS) screen.removeListener(event, onDisplayChange);
