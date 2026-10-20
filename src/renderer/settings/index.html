@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Overlay Clock Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <main>
+    <section>
+      <h2>Text</h2>
+      <label class="row">Font
+        <input id="fontFamily" list="fontList" placeholder="System default" autocomplete="off">
+        <datalist id="fontList"></datalist>
+      </label>
+      <label class="row">Bold <input id="bold" type="checkbox"></label>
+      <label class="row">Size
+        <span class="pair"><input id="fontSizeRange" type="range" min="8" max="400"><input id="fontSize" type="number" min="8" max="400"></span>
+      </label>
+      <label class="row">Text color <input id="color" type="color"></label>
+    </section>
+
+    <section>
+      <h2>Outline</h2>
+      <label class="row">Outline color <input id="outlineColor" type="color"></label>
+      <label class="row">Thickness
+        <span class="pair"><input id="outlineWidth" type="range" min="0" max="20"><output id="outlineWidthOut"></output></span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Clock</h2>
+      <label class="row">Opacity
+        <span class="pair"><input id="opacity" type="range" min="10" max="100"><output id="opacityOut"></output></span>
+      </label>
+      <label class="row">Show seconds <input id="showSeconds" type="checkbox"></label>
+      <label class="row">24-hour time <input id="hour24" type="checkbox"></label>
+      <label class="row" id="displayRow" hidden>Show on <select id="displayId"></select></label>
+    </section>
+
+    <section>
+      <h2>Shortcuts</h2>
+      <div class="row">Unlock / lock to move
+        <span class="shortcut"><button id="shortcutToggleLock" class="record"></button><small class="error" id="shortcutToggleLockError"></small></span>
+      </div>
+      <div class="row">Hide / show
+        <span class="shortcut"><button id="shortcutToggleHide" class="record"></button><small class="error" id="shortcutToggleHideError"></small></span>
+      </div>
+      <p class="hint">Click a shortcut, then press the new key combination. Esc cancels.</p>
+    </section>
+
+    <section>
+      <h2>General</h2>
+      <label class="row">Start at login <input id="openAtLogin" type="checkbox"></label>
+      <button id="reset" class="secondary">Reset to defaults</button>
+    </section>
+  </main>
+  <script src="accelerator.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>
