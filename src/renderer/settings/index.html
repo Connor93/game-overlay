@@ -78,6 +78,38 @@
       <button class="secondary" id="resetPanelBounds">Reset panel position &amp; size</button>
     </section>
 
+    <h1>EXP tracker</h1>
+    <section>
+      <h2>Look</h2>
+      <label class="row">Opacity when passive
+        <span class="pair"><input data-bind="exp.opacity" data-kind="percent" type="range" min="10" max="100"><output data-show="exp.opacity" data-unit="%"></output></span>
+      </label>
+      <label class="row">Active highlight color <input data-bind="exp.highlightColor" type="color"></label>
+      <label class="row">Start hidden <input data-bind="exp.startHidden" type="checkbox"></label>
+    </section>
+
+    <section>
+      <h2>Tracking</h2>
+      <label class="row">Start a session on steady EXP <input data-bind="exp.autoStart" type="checkbox"></label>
+      <p class="hint">Off: sessions only start when you press Start.</p>
+      <button class="secondary" id="relocateExp">Find EXP bar again</button>
+      <p class="hint">Use this if the panel keeps saying it can't read the EXP bar after you changed resolution or display.</p>
+    </section>
+
+    <section>
+      <h2>Shortcuts</h2>
+      <div class="row">Activate / deactivate
+        <span class="shortcut"><button class="record" data-shortcut-id="exp.toggleActive"></button><small class="error"></small></span>
+      </div>
+      <div class="row">Hide / show
+        <span class="shortcut"><button class="record" data-shortcut-id="exp.toggleHide"></button><small class="error"></small></span>
+      </div>
+      <div class="row">Start / stop session
+        <span class="shortcut"><button class="record" data-shortcut-id="exp.startStop"></button><small class="error"></small></span>
+      </div>
+      <button class="secondary" id="resetExpBounds">Reset panel position &amp; size</button>
+    </section>
+
 
     <h1>General</h1>
     <section>

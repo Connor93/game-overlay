@@ -1,6 +1,6 @@
 {
   "name": "game-overlay",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Always-on-top game overlay: clock and meowdb panel",
   "main": "src/main/main.js",
   "private": true,

@@ -140,6 +140,8 @@ function bind() {
   $('resetPanelBounds').addEventListener('click', () =>
     update({ meowdb: { position: defaults.meowdb.position, size: defaults.meowdb.size } }),
   );
+  $('resetExpBounds').addEventListener('click', () => update({ exp: { position: defaults.exp.position, size: defaults.exp.size } }));
+  $('relocateExp').addEventListener('click', () => update({ exp: { regions: null } }));
 
   for (const button of $$('[data-reset]')) {
     button.addEventListener('click', async () => {
