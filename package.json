@@ -1,6 +1,6 @@
 {
   "name": "overlay-clock",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An always-on-top, transparent clock overlay",
   "main": "src/main/main.js",
   "private": true,
