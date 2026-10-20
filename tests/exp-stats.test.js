@@ -41,3 +41,8 @@ test('summarizeHistory picks the best session per map and sorts by it', () => {
     { map: 'Ant Tunnel I', count: 1, best: { sessionId: 'c', expPerHour: 50000 } },
   ]);
 });
+
+test('last 5 minutes in a shorter session uses the time actually covered', () => {
+  const session = { trainingMs: 2 * MIN, gainedExp: 2000, startedAt: 28 * MIN, gains: [{ t: 29 * MIN, exp: 1000 }, { t: 30 * MIN, exp: 1000 }] };
+  expect(sessionStats(session, { now: 30 * MIN, exp: 1, pct: 1, required: null }).last5mPerHour).toBe(60000);
+});

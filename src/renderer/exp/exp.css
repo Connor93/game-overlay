@@ -1,0 +1,73 @@
+/* EXP tracker panel (Live / History). Shared panel look is in panel-shell. */
+body { background: transparent; }
+
+#content {
+  position: fixed;
+  inset: 4px;
+  overflow-y: auto;
+  padding: 8px 10px 10px;
+  background: rgba(28, 28, 30, 0.86);
+  border-radius: 6px;
+}
+body.active #content { top: 36px; bottom: 16px; }
+
+.tab {
+  font: inherit;
+  border: 0;
+  border-radius: 4px;
+  padding: 3px 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab.on { background: rgba(255, 255, 255, 0.14); color: #fff; }
+
+.map { font-weight: 700; font-size: 14px; }
+.sub { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+.big { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.big small { font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 6px; }
+.grid div { display: flex; flex-direction: column; }
+.grid label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.status { margin-top: 8px; color: var(--muted); }
+.status .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; background: var(--muted); }
+.status .dot.tracking { background: #30d158; }
+.status .dot.paused { background: #ffd60a; }
+.hint-line { margin-top: 4px; color: #ffd60a; font-size: 11px; }
+
+button.primary, button.small, #nameForm button {
+  font: inherit;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+button.primary { margin-top: 8px; padding: 5px 14px; }
+button.primary.stop { background: #d70015; }
+button.small { padding: 3px 8px; font-size: 11px; margin-top: 4px; }
+/* Controls only work while active; passive is click-through. */
+body:not(.active) button, body:not(.active) form { display: none; }
+
+#nameForm { display: flex; gap: 4px; margin-top: 6px; }
+#nameForm[hidden] { display: none; }
+#mapName { flex: 1; min-width: 0; font: inherit; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.3); color: #fff; }
+#nameForm button { padding: 3px 8px; }
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.row:first-child { border-top: 0; }
+.row b { font-weight: 600; }
+.row span { color: var(--muted); text-align: right; }
+.empty { color: var(--muted); padding: 8px 0; }
+.session { padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.session .line { display: flex; justify-content: space-between; }
+.session .meta { color: var(--muted); font-size: 11px; }
+.session .actions { display: flex; gap: 4px; }
+[hidden] { display: none !important; }

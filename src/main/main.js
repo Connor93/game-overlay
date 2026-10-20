@@ -19,7 +19,7 @@ const { loginItemSettings } = require('./login-item');
 //     reshow(), onSecondInstance() }
 // ctx gives a tool its own settings section: getSettings(), saveSettings(patch) (save without
 // re-applying), updateSettings(patch) (save and apply), plus refreshTray() and reshowOverlays().
-const TOOL_MODULES = [require('./tools/clock'), require('./tools/meowdb')];
+const TOOL_MODULES = [require('./tools/clock'), require('./tools/meowdb'), require('./tools/exp')];
 
 const SAVE_DELAY_MS = 300;
 // What a "reset to defaults" keeps per section, so the tool stays where the user put it.

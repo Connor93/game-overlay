@@ -10,7 +10,9 @@ const perHour = (exp, ms) => (ms >= MIN_TRAINING_FOR_RATE_MS ? Math.round((exp /
 function sessionStats(session, { now, exp, required }) {
   const expPerHour = perHour(session.gainedExp, session.trainingMs);
   const recent = (session.gains || []).filter((g) => now - g.t <= RECENT_MS).reduce((sum, g) => sum + g.exp, 0);
-  const last5mPerHour = Math.round((recent / RECENT_MS) * HOUR);
+  // A session younger than 5 minutes only covers its own length.
+  const window = Math.min(RECENT_MS, Math.max(now - session.startedAt, MIN_TRAINING_FOR_RATE_MS));
+  const last5mPerHour = Math.round((recent / window) * HOUR);
   // The last 5 minutes say more about "right now", once there are 5 minutes to look at.
   const rate = now - session.startedAt >= RECENT_MS ? last5mPerHour : expPerHour;
   const needed = required ? midpoint(required) : null;
