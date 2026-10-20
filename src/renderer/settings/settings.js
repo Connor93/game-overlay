@@ -10,6 +10,9 @@ const SHORTCUT_FIELDS = {
   'clock.toggleHide': ['clock', 'shortcutToggleHide'],
   'meowdb.toggleActive': ['meowdb', 'shortcutToggleActive'],
   'meowdb.toggleHide': ['meowdb', 'shortcutToggleHide'],
+  'exp.toggleActive': ['exp', 'shortcutToggleActive'],
+  'exp.toggleHide': ['exp', 'shortcutToggleHide'],
+  'exp.startStop': ['exp', 'shortcutStartStop'],
 };
 
 // Stored fontFamily is CSS; the field shows just the family name.

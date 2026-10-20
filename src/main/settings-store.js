@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { DEFAULT_SETTINGS, DEFAULT_CLOCK, DEFAULT_MEOWDB, MEOWDB_HOME } = require('../shared/defaults');
+const { DEFAULT_SETTINGS, DEFAULT_CLOCK, DEFAULT_MEOWDB, DEFAULT_EXP, MEOWDB_HOME } = require('../shared/defaults');
 
 const COLOR = /^#[0-9a-f]{6}$/i;
 const isObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -77,6 +77,31 @@ function normalizeMeowdb(raw) {
   return meowdb;
 }
 
+const isRect = (r) => isObject(r) && ['x', 'y', 'width', 'height'].every((k) => isNumber(r[k])) && r.width > 0 && r.height > 0;
+
+function normalizeRegions(raw) {
+  if (!isObject(raw) || !isNumber(raw.displayId) || !isRect(raw.exp) || !isNumber(raw.textHeight)) return null;
+  return { displayId: raw.displayId, exp: { ...raw.exp }, map: isRect(raw.map) ? { ...raw.map } : null, textHeight: raw.textHeight };
+}
+
+function normalizeExp(raw) {
+  if (!isObject(raw)) raw = {};
+  const exp = pickFields(raw, DEFAULT_EXP, {
+    ranges: { opacity: [0.1, 1] },
+    colors: ['highlightColor'],
+    strings: ['shortcutToggleActive', 'shortcutToggleHide', 'shortcutStartStop'],
+    booleans: ['startHidden', 'autoStart'],
+  });
+  const size = isObject(raw.size) ? raw.size : {};
+  exp.size = {
+    width: isNumber(size.width) ? clamp(size.width, 220, 4000) : DEFAULT_EXP.size.width,
+    height: isNumber(size.height) ? clamp(size.height, 200, 4000) : DEFAULT_EXP.size.height,
+  };
+  exp.position = normalizePosition(raw.position, DEFAULT_EXP.position);
+  exp.regions = normalizeRegions(raw.regions);
+  return exp;
+}
+
 // Overlay Clock 0.1.x stored the clock settings flat at the top level.
 const isLegacyFlat = (raw) => !isObject(raw.clock) && Object.keys(DEFAULT_CLOCK).some((key) => key in raw);
 
@@ -89,13 +114,14 @@ function normalizeSettings(raw) {
     app: { openAtLogin: typeof app.openAtLogin === 'boolean' ? app.openAtLogin : DEFAULT_SETTINGS.app.openAtLogin },
     clock: normalizeClock(legacy ? raw : raw.clock),
     meowdb: normalizeMeowdb(raw.meowdb),
+    exp: normalizeExp(raw.exp),
   };
 }
 
-// Apply a partial { app?, clock?, meowdb? } on top of settings, merging position/size one level deeper.
+// Apply a partial { app?, clock?, meowdb?, exp? } on top of settings, merging position/size one level deeper.
 function mergeSettingsPatch(settings, patch) {
   const merged = { ...settings };
-  for (const section of ['app', 'clock', 'meowdb']) {
+  for (const section of ['app', 'clock', 'meowdb', 'exp']) {
     const p = patch[section];
     if (!isObject(p)) continue;
     const next = { ...settings[section], ...p };

@@ -7,6 +7,9 @@ test('maps settings sections to shortcut ids', () =>
     'clock.toggleHide': 'Control+Alt+H',
     'meowdb.toggleActive': 'Control+Alt+M',
     'meowdb.toggleHide': 'Control+Alt+N',
+    'exp.toggleActive': 'Control+Alt+E',
+    'exp.toggleHide': 'Control+Alt+R',
+    'exp.startStop': 'Control+Alt+S',
   }));
 
 test('withAppliedShortcuts writes accelerators back without mutating', () => {

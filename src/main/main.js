@@ -23,7 +23,7 @@ const TOOL_MODULES = [require('./tools/clock'), require('./tools/meowdb')];
 
 const SAVE_DELAY_MS = 300;
 // What a "reset to defaults" keeps per section, so the tool stays where the user put it.
-const KEEP_ON_RESET = { clock: ['position'], meowdb: ['position', 'size', 'lastUrl'] };
+const KEEP_ON_RESET = { clock: ['position'], meowdb: ['position', 'size', 'lastUrl'], exp: ['position', 'size', 'regions'] };
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

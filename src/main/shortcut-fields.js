@@ -4,6 +4,9 @@ const SHORTCUT_FIELDS = {
   'clock.toggleHide': ['clock', 'shortcutToggleHide'],
   'meowdb.toggleActive': ['meowdb', 'shortcutToggleActive'],
   'meowdb.toggleHide': ['meowdb', 'shortcutToggleHide'],
+  'exp.toggleActive': ['exp', 'shortcutToggleActive'],
+  'exp.toggleHide': ['exp', 'shortcutToggleHide'],
+  'exp.startStop': ['exp', 'shortcutStartStop'],
 };
 
 function shortcutMapFromSettings(settings) {

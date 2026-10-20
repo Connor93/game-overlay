@@ -8,7 +8,7 @@ const {
   saveSettings,
   importLegacySettings,
 } = require('../src/main/settings-store');
-const { DEFAULT_SETTINGS, DEFAULT_MEOWDB, MEOWDB_HOME } = require('../src/shared/defaults');
+const { DEFAULT_SETTINGS, DEFAULT_MEOWDB, DEFAULT_EXP, MEOWDB_HOME } = require('../src/shared/defaults');
 
 const tmp = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'oc-')), 'settings.json');
 
@@ -109,3 +109,31 @@ test('ad blocking is on by default and can be turned off', () => {
   expect(normalizeSettings({ meowdb: { blockAds: false } }).meowdb.blockAds).toBe(false);
   expect(normalizeSettings({ meowdb: { blockAds: 'no' } }).meowdb.blockAds).toBe(true);
 });
+
+test('EXP tracker defaults', () => {
+  expect(DEFAULT_SETTINGS.exp).toBe(DEFAULT_EXP);
+  expect(DEFAULT_EXP).toMatchObject({
+    autoStart: true,
+    opacity: 0.85,
+    shortcutToggleActive: 'Control+Alt+E',
+    shortcutToggleHide: 'Control+Alt+R',
+    shortcutStartStop: 'Control+Alt+S',
+    size: { width: 260, height: 300 },
+    position: { displayId: null, anchorX: 'right', offsetX: 20, anchorY: 'top', offsetY: 140 },
+    regions: null,
+  });
+});
+test('EXP section is validated and clamped', () => {
+  const s = normalizeSettings({ exp: { opacity: 0, autoStart: 'yes', size: { width: 10, height: 10 } } }).exp;
+  expect(s.opacity).toBe(0.1);
+  expect(s.autoStart).toBe(true);
+  expect(s.size).toEqual({ width: 220, height: 200 });
+});
+test('cached EXP regions are kept only when well-formed', () => {
+  const good = { displayId: 2, exp: { x: 1, y: 2, width: 30, height: 10 }, map: null, textHeight: 16 };
+  expect(normalizeSettings({ exp: { regions: good } }).exp.regions).toEqual(good);
+  expect(normalizeSettings({ exp: { regions: { displayId: 2, exp: { x: 'a' } } } }).exp.regions).toBeNull();
+  expect(normalizeSettings({ exp: { regions: { ...good, map: { x: 0, y: 0, width: 5, height: 5 } } } }).exp.regions.map).toEqual({ x: 0, y: 0, width: 5, height: 5 });
+});
+test('mergeSettingsPatch handles the EXP section', () =>
+  expect(mergeSettingsPatch(DEFAULT_SETTINGS, { exp: { position: { offsetY: 300 } } }).exp.position.offsetY).toBe(300));
