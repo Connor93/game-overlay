@@ -1,8 +1,8 @@
 const path = require('path');
-const { app, BrowserWindow, WebContentsView, ipcMain, screen, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, screen, session, shell } = require('electron');
 const { MEOWDB_HOME } = require('../../shared/defaults');
 const { resolvePlacement, positionFromBounds, clampSize } = require('../placement');
-const { isMeowdbUrl, classifyNavigation, shouldDropToPassive } = require('../panel-logic');
+const { ACTIVATE_GRACE_MS, isMeowdbUrl, classifyNavigation, shouldDropToPassive, isPermissionAllowed } = require('../panel-logic');
 
 const TOP_LEVEL = 'screen-saver';
 const REASSERT_TOP_MS = 2000;
@@ -59,6 +59,12 @@ function create(ctx) {
   win.setOpacity(settings().opacity);
   win.on('system-context-menu', (event) => event.preventDefault());
   win.loadFile(path.join(__dirname, '../../renderer/panel/frame.html'));
+
+  // meowdb is remote content: no permissions beyond clipboard writes, and no downloads.
+  const meowdbSession = session.fromPartition('persist:meowdb');
+  meowdbSession.setPermissionRequestHandler((_wc, permission, callback) => callback(isPermissionAllowed(permission)));
+  meowdbSession.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission));
+  meowdbSession.on('will-download', (event) => event.preventDefault());
 
   const view = new WebContentsView({
     webPreferences: { partition: 'persist:meowdb', sandbox: true, contextIsolation: true, nodeIntegration: false },
@@ -125,6 +131,9 @@ function create(ctx) {
     layout();
     pushState();
     ctx.refreshTray();
+    // If focus never actually arrived (or left during the grace period), don't stay orange
+    // while keys go elsewhere.
+    setTimeout(checkFocus, ACTIVATE_GRACE_MS + BLUR_CHECK_MS);
   }
 
   // handBackFocus: true when the user asked to go back to the game (shortcut, tray, hide), so we
@@ -161,15 +170,15 @@ function create(ctx) {
 
   // Clicking the game (or switching apps) while active drops the panel to passive. Focus moving to
   // our own Settings window or a login popup doesn't count.
-  const onAnyBlur = () =>
-    setTimeout(() => {
-      const drop = shouldDropToPassive({
-        active,
-        ownWindowFocused: BrowserWindow.getFocusedWindow() !== null,
-        msSinceActivate: Date.now() - activatedAt,
-      });
-      if (drop) deactivate({ handBackFocus: false });
-    }, BLUR_CHECK_MS);
+  function checkFocus() {
+    const drop = shouldDropToPassive({
+      active,
+      ownWindowFocused: BrowserWindow.getFocusedWindow() !== null,
+      msSinceActivate: Date.now() - activatedAt,
+    });
+    if (drop) deactivate({ handBackFocus: false });
+  }
+  const onAnyBlur = () => setTimeout(checkFocus, BLUR_CHECK_MS);
   app.on('browser-window-blur', onAnyBlur);
 
   win.on('moved', () => active && saveBounds());
@@ -199,9 +208,11 @@ function create(ctx) {
   ipcMain.on('panel:resize', onResize);
   ipcMain.on('panel:resize-end', onResizeEnd);
 
-  // Links: meowdb stays in the panel, sign-in popups open as in-app windows, everything else
-  // goes to the system browser.
+  // Links: meowdb stays in the panel, sign-in popups open as in-app windows, other web links go
+  // to the system browser. While passive the user can't have clicked anything, so a page script
+  // (an ad, say) gets nothing: no popups, and no browser opening over the game.
   view.webContents.setWindowOpenHandler(({ url, disposition }) => {
+    if (!active) return { action: 'deny' };
     const target = classifyNavigation(url, disposition);
     if (target === 'panel') view.webContents.loadURL(url);
     if (target === 'external') shell.openExternal(url);
@@ -213,9 +224,10 @@ function create(ctx) {
   });
   view.webContents.on('did-create-window', keepOnTop);
   view.webContents.on('will-navigate', (event, url) => {
-    if (classifyNavigation(url, 'default') !== 'external') return;
+    const target = classifyNavigation(url, 'default');
+    if (target === 'panel') return;
     event.preventDefault();
-    shell.openExternal(url);
+    if (target === 'external' && active) shell.openExternal(url);
   });
 
   const onNavigated = (_event, url) => {
@@ -266,9 +278,15 @@ function create(ctx) {
   return {
     window: win,
     shortcutHandlers,
+    // Each item does what its label says, even if the state changed while the menu was open
+    // (on Windows, clicking the tray can itself drop the panel to passive).
     trayItems: () => [
-      { label: active ? 'Deactivate meowdb' : 'Activate meowdb', click: shortcutHandlers['meowdb.toggleActive'] },
-      { label: hidden ? 'Show meowdb' : 'Hide meowdb', click: shortcutHandlers['meowdb.toggleHide'] },
+      active
+        ? { label: 'Deactivate meowdb', click: () => deactivate({ handBackFocus: true }) }
+        : { label: 'Activate meowdb', click: () => !active && activate() },
+      hidden
+        ? { label: 'Show meowdb', click: () => setHidden(false) }
+        : { label: 'Hide meowdb', click: () => setHidden(true) },
       { label: 'Go to meowdb home', click: () => view.webContents.loadURL(MEOWDB_HOME) },
     ],
     applySettings(section, prev) {

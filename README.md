@@ -24,7 +24,7 @@ Your clock settings come over automatically the first time Game Overlay starts. 
 - **Quit Overlay Clock** (menu bar or tray icon → Quit Overlay Clock).
 - **Uninstall it**: on a Mac, drag it from Applications to the Trash; on Windows, use Settings → Apps.
 
-Both apps use the same clock shortcuts, so leaving Overlay Clock running makes the shortcuts do things twice.
+Both apps use the same clock shortcuts, so leaving Overlay Clock running makes the shortcuts do things twice. If you had *Start at login* on, Game Overlay turns it on for itself. On Windows, turn it off in Overlay Clock before uninstalling so its old login entry doesn't linger.
 
 ### First launch
 

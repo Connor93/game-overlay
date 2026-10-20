@@ -33,7 +33,10 @@ if (!app.requestSingleInstanceLock()) {
 
   const settingsPath = path.join(app.getPath('userData'), 'settings.json');
   // First launch after the rename from Overlay Clock: bring its settings over.
-  importLegacySettings(settingsPath, path.join(app.getPath('appData'), 'overlay-clock', 'settings.json'));
+  const importedLegacy = importLegacySettings(
+    settingsPath,
+    path.join(app.getPath('appData'), 'overlay-clock', 'settings.json'),
+  );
   let settings = loadSettings(settingsPath);
   const tools = {};
   let tray;
@@ -131,6 +134,10 @@ if (!app.requestSingleInstanceLock()) {
     const { failed } = registerShortcuts(shortcutMapFromSettings(settings), allShortcutHandlers());
     shortcutErrors = failed;
     if (failed.length) console.error(`Could not register shortcuts: ${failed.join(', ')}`);
+    // Overlay Clock's "start at login" registered Overlay Clock, not us; carry the choice over.
+    if (app.isPackaged && importedLegacy && settings.app.openAtLogin) {
+      app.setLoginItemSettings(loginItemSettings(true));
+    }
     // The user may have removed the login item in the OS; show what's really set.
     if (app.isPackaged) {
       const { openAtLogin } = app.getLoginItemSettings(loginItemSettings(settings.app.openAtLogin));
