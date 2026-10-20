@@ -20,6 +20,8 @@
     "url": "https://github.com/Connor93/game-overlay.git"
   },
   "dependencies": {
-    "@ghostery/adblocker-electron": "2.18.2"
+    "@ghostery/adblocker-electron": "2.18.2",
+    "@tesseract.js-data/eng": "1.0.0",
+    "tesseract.js": "7.0.0"
   }
 }

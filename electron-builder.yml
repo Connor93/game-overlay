@@ -3,6 +3,12 @@ productName: Game Overlay
 files:
   - src/**
   - package.json
+  - "!node_modules/@tesseract.js-data/eng/4.0.0/**" # only the 4.0.0_best_int model is used
+# The OCR worker, its wasm core and the English model must be real files on disk, not inside app.asar.
+asarUnpack:
+  - node_modules/tesseract.js/**
+  - node_modules/tesseract.js-core/**
+  - node_modules/@tesseract.js-data/eng/4.0.0_best_int/**
 directories:
   buildResources: build
   output: dist
