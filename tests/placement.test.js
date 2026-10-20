@@ -43,3 +43,12 @@ test('flush against the bottom-left corner is allowed', () => {
 test('positionFromBounds clamps a window dragged partly off-screen', () =>
   expect(positionFromBounds({ x: 5000, y: -50, ...size }, second))
     .toEqual({ displayId: 2, anchorX: 'right', offsetX: 0, anchorY: 'top', offsetY: 0 }));
+
+const { clampSize } = require('../src/main/placement');
+
+test('clampSize shrinks a saved size to fit a smaller screen', () =>
+  expect(clampSize({ width: 2000, height: 1500 }, { x: 0, y: 0, width: 1280, height: 720 })).toEqual({ width: 1280, height: 720 }));
+test('clampSize enforces the minimum', () =>
+  expect(clampSize({ width: 100, height: 100 }, { x: 0, y: 0, width: 1920, height: 1080 })).toEqual({ width: 320, height: 300 }));
+test('clampSize: a screen smaller than the minimum wins', () =>
+  expect(clampSize({ width: 520, height: 700 }, { x: 0, y: 0, width: 300, height: 200 })).toEqual({ width: 300, height: 200 }));

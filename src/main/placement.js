@@ -42,4 +42,14 @@ function positionFromBounds(bounds, display) {
   };
 }
 
-module.exports = { resolvePlacement, positionFromBounds };
+const MIN_SIZE = { width: 320, height: 300 };
+
+// Fit a saved window size to a work area: at least the minimum, at most the screen (the screen wins).
+function clampSize(size, workArea, min = MIN_SIZE) {
+  return {
+    width: Math.min(workArea.width, Math.max(min.width, size.width)),
+    height: Math.min(workArea.height, Math.max(min.height, size.height)),
+  };
+}
+
+module.exports = { resolvePlacement, positionFromBounds, clampSize };
