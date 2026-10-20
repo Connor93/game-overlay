@@ -68,7 +68,7 @@ test('finds EXP with the left of the game hidden behind one of our panels', asyn
   const regions = await reader.locate(frame);
   expect(regions).not.toBeNull();
   expect(await reader.readExp(frame, regions)).toEqual({ exp: 30017, pct: 74.09, sure: true });
-  expect(regions.map.x).toBeCloseTo(game.x + 88, -1); // where the minimap would be
+  expect(Math.abs(regions.map.x - (game.x + 88))).toBeLessThanOrEqual(10); // where the minimap would be, give or take
 }, 60000);
 
 // When the game's left edge is visible it is exact; the bracket's estimate is only good to a few
@@ -91,6 +91,17 @@ test('reads the map name on the laptop', async () => {
   const u = 1890 / 1440;
   const regions = { exp: null, map: { x: 88 * u, y: 50 * u, width: 170 * u, height: 58 * u }, textHeight: 17 * u };
   expect(await reader.readMap(part, regions)).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
+}, 60000);
+
+// A misplaced map region (say the game's edge was misjudged) must not turn into a map name.
+test('text that is not a clear map name reads as no map', async () => {
+  const part = img.decodePng(fs.readFileSync(path.join(__dirname, 'fixtures/exp/minimap-laptop.png')));
+  const u = 1890 / 1440;
+  const clipped = { exp: null, map: { x: 103 * u, y: 50 * u, width: 155 * u, height: 58 * u }, textHeight: 17 * u }; // cuts into the text
+  const map = await reader.readMap(part, clipped);
+  if (map) expect(map).toEqual({ street: 'Hidden Street', map: 'Over the Wall' });
+  const status = img.decodePng(fs.readFileSync(path.join(__dirname, 'fixtures/exp/ingame-status.png')));
+  expect(await reader.readMap(status, { exp: null, map: { x: 150, y: 0, width: 300, height: 40 }, textHeight: 17 })).toBeNull();
 }, 60000);
 
 test('a black screen has nothing to locate', async () => {

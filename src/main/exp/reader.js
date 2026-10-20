@@ -9,6 +9,7 @@ const { readExpNumbers, scaleForGameHeight, findBrackets } = require('./digits')
 
 const MAP_SCALE_TARGET = 4; // the map name reads best at about 4× its 100% size
 const MAP_PADDING = 4; // pixels at 100% size
+const MAP_MIN_CONFIDENCE = 80; // OCR's line confidence: clean names read 87–95, clipped or stray text below
 const LEFT_EDGE_TOLERANCE = 40; // the bracket's estimate of the left edge is good to about this
 
 function medianGray(gray) {
@@ -26,7 +27,7 @@ const REF = {
   // The numbers after "EXP", with room to either side: the digit reader anchors on the green "["
   // and grows leftwards from it. Starts just right of the MP line's "]", ends before the Cash Shop.
   exp: { x: 1375, y: 1378, width: 230, height: 28 },
-  expBracketX: 1474, // the "[" after the EXP number
+  expBracketX: 1477, // the "[" after the EXP number (1474–1480 on the user's two screens)
   map: { x: 88, y: 50, width: 170, height: 58 }, // street + map name in the minimap
   textHeight: 17,
 };
@@ -41,7 +42,7 @@ function createReader(ocr) {
 
   // OCR sometimes drops a letter close to the crop's edge, and sometimes misreads small text once
   // given more room; so read it both ways (as is, and padded with its own background) and keep
-  // the reading OCR is surer of.
+  // the reading OCR is surer of. Not sure enough (a clipped name, the wrong spot) reads as no map.
   async function readMap(frame, regions) {
     if (!regions.map) return null;
     const u = regions.textHeight / REF.textHeight;
@@ -53,7 +54,8 @@ function createReader(ocr) {
       const confidence = Math.min(...lines.map((l) => l.confidence));
       if (lines.length && (!best || confidence > best.confidence)) best = { lines, confidence };
     }
-    return best && parseMapName(best.lines.map((l) => l.text));
+    if (!best || best.confidence < MAP_MIN_CONFIDENCE) return null;
+    return parseMapName(best.lines.map((l) => l.text));
   }
 
   // The game's height (from its bounds) gives the scale and the status bar's row. Along that row,
