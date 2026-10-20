@@ -9,12 +9,23 @@ const { readExpNumbers, scaleForGameHeight } = require('./digits');
 
 const LABEL_SEARCH_SCALES = [1, 1.5, 2];
 const MAP_SCALE_TARGET = 4; // the map name reads best at about 4× its 100% size
+const MAP_PADDING = 4; // pixels at 100% size
 
-// The game's UI scales with the game area. Where things are on a 1440-pixel-tall game
-// (measured from the user's screenshot); other sizes scale from these.
+function medianGray(gray) {
+  const values = [];
+  for (let i = 0; i < gray.data.length; i += 4) values.push(gray.data[i]);
+  return values.sort((a, b) => a - b)[values.length >> 1];
+}
+
+// The game's UI scales with the game area. Where things are on a 2560×1440 game (measured from the
+// user's screenshot); other sizes scale from these. The status bar is centred along the bottom (a
+// wider game shifts it), the minimap sits in the top-left corner.
 const REF = {
+  width: 2560,
   height: 1440,
-  exp: { x: 1398, y: 1378, width: 160, height: 28 }, // the numbers after "EXP"
+  // The numbers after "EXP", with room to either side: the digit reader anchors on the green "["
+  // and grows leftwards from it. Starts just right of the MP line's "]", ends before the Cash Shop.
+  exp: { x: 1375, y: 1378, width: 230, height: 28 },
   map: { x: 88, y: 50, width: 170, height: 58 }, // street + map name in the minimap
   textHeight: 17,
 };
@@ -27,11 +38,21 @@ function createReader(ocr) {
     return readExpNumbers(img.crop(frame, regions.exp), regions.scale);
   }
 
+  // OCR sometimes drops a letter close to the crop's edge, and sometimes misreads small text once
+  // given more room; so read it both ways (as is, and padded with its own background) and keep
+  // the reading OCR is surer of.
   async function readMap(frame, regions) {
     if (!regions.map) return null;
-    const scale = clamp(Math.round(MAP_SCALE_TARGET * (REF.textHeight / regions.textHeight)), 2, 8);
-    const text = await ocr.recognizeBlock(img.encodePng(img.scaleNearest(img.toGray(img.crop(frame, regions.map)), scale)));
-    return parseMapName(text.split('\n'));
+    const u = regions.textHeight / REF.textHeight;
+    const scale = clamp(Math.round(MAP_SCALE_TARGET / u), 2, 8);
+    const gray = img.scaleNearest(img.toGray(img.crop(frame, regions.map)), scale);
+    let best = null;
+    for (const padding of [0, Math.round(MAP_PADDING * u * scale)]) {
+      const lines = (await ocr.recognizeLines(img.encodePng(padding ? img.pad(gray, padding, medianGray(gray)) : gray))).filter((l) => l.text);
+      const confidence = Math.min(...lines.map((l) => l.confidence));
+      if (lines.length && (!best || confidence > best.confidence)) best = { lines, confidence };
+    }
+    return best && parseMapName(best.lines.map((l) => l.text));
   }
 
   // Fallback when the layout isn't the expected one: find the word "EXP" along the bottom and
@@ -45,7 +66,7 @@ function createReader(ocr) {
       if (label) {
         const right = strip.x + label.bbox.x1 / scale;
         const bottom = strip.y + label.bbox.y1 / scale;
-        return { x: right + 3 * u, y: bottom - 34 * u, width: REF.exp.width * u, height: REF.exp.height * u };
+        return { x: right, y: bottom - 34 * u, width: REF.exp.width * u, height: REF.exp.height * u };
       }
     }
     return null;
@@ -55,8 +76,9 @@ function createReader(ocr) {
     const game = img.findGameBounds(frame);
     if (!game) return null;
     const u = game.height / REF.height;
-    const at = (r) => ({ x: game.x + r.x * u, y: game.y + r.y * u, width: r.width * u, height: r.height * u });
-    const regions = { exp: at(REF.exp), map: at(REF.map), textHeight: REF.textHeight * u, scale: scaleForGameHeight(game.height) };
+    const at = (r, x0) => ({ x: x0 + r.x * u, y: game.y + r.y * u, width: r.width * u, height: r.height * u });
+    const centre = game.x + game.width / 2 - (REF.width / 2) * u;
+    const regions = { exp: at(REF.exp, centre), map: at(REF.map, game.x), textHeight: REF.textHeight * u, scale: scaleForGameHeight(game.height) };
     if (await readExp(frame, regions)) return regions;
     const exp = await findExpLabel(frame, game, u);
     if (exp && (await readExp(frame, { ...regions, exp }))) return { ...regions, exp };

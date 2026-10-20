@@ -54,3 +54,26 @@ test('a misread percentage alone never fakes a level-up', () => {
   v.accept({ exp: 27589, pct: 68.1 });
   expect(v.accept({ exp: 27589, pct: 8.1 }).status).toBe('reject');
 });
+
+// Readings the digit reader isn't sure of (sure: false) can only confirm what is already known.
+test('an unsure first reading is not trusted', () => {
+  const v = createValidator();
+  expect(v.accept({ exp: 27589, pct: 68.1, sure: false }).status).toBe('reject');
+  expect(v.accept({ exp: 27589, pct: 68.1, sure: true }).status).toBe('ok');
+});
+test('an unsure reading that agrees with the level is ok', () => {
+  const v = createValidator();
+  v.accept({ exp: 27589, pct: 68.1, sure: true });
+  expect(v.accept({ exp: 27650, pct: 68.25, sure: false }).status).toBe('ok');
+});
+test('unsure readings that disagree are rejected and never reset the level', () => {
+  const v = createValidator();
+  v.accept({ exp: 27589, pct: 68.1, sure: true });
+  for (let i = 0; i < 5; i++) expect(v.accept({ exp: 27089 + i, pct: 68.1, sure: false }).status).toBe('reject');
+  expect(v.accept({ exp: 27650, pct: 68.25, sure: true }).status).toBe('ok');
+});
+test('an unsure reading never counts as a level-up', () => {
+  const v = createValidator();
+  v.accept({ exp: 40400, pct: 99.72, sure: true });
+  expect(v.accept({ exp: 120, pct: 0.27, sure: false }).status).toBe('reject');
+});

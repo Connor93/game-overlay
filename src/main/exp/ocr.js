@@ -31,11 +31,15 @@ function createOcr() {
         await w.setParameters({ tessedit_char_whitelist: whitelist, tessedit_pageseg_mode: PSM.SINGLE_LINE });
         return (await w.recognize(png)).data.text.trim();
       }),
-    // A small block of text (e.g. the minimap's two name lines), as plain text.
-    recognizeBlock: (png) =>
+    // A small block of text (e.g. the minimap's two name lines): each line with its confidence (0–100).
+    recognizeLines: (png) =>
       run(async (w) => {
         await w.setParameters({ tessedit_char_whitelist: '', tessedit_pageseg_mode: PSM.AUTO });
-        return (await w.recognize(png)).data.text.trim();
+        const { data } = await w.recognize(png, {}, { blocks: true });
+        const lines = [];
+        for (const block of data.blocks || [])
+          for (const paragraph of block.paragraphs) for (const l of paragraph.lines) lines.push({ text: l.text.trim(), confidence: l.confidence });
+        return lines;
       }),
     // Every word found, with its box and which line it's on.
     recognizeWords: (png) =>

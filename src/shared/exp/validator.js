@@ -3,6 +3,7 @@
 // Within one level, EXP needed for the level is fixed, and the on-screen percentage (two decimals)
 // pins it to a narrow range: required ≈ exp / pct. Every trusted reading narrows that range; a
 // reading whose own range doesn't overlap it must be a misread. Level-ups reset the range.
+// A reading the digit reader wasn't sure of (sure: false) can only confirm the range, never set it.
 
 const PCT_HALF_STEP = 0.005; // the percentage is rounded to two decimals
 const LEVEL_UP_PCT_DROP = 50;
@@ -34,6 +35,13 @@ function createValidator() {
   function accept(reading) {
     const range = requiredRange(reading);
     const verdict = (status, extra) => ({ status, exp: reading.exp, pct: reading.pct, required, ...extra });
+
+    if (reading.sure === false) {
+      const both = required && overlap(required, range);
+      if (!both) return verdict('reject');
+      trust(reading, both);
+      return verdict('ok');
+    }
 
     if (!required) {
       trust(reading, range);

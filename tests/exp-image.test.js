@@ -74,9 +74,18 @@ test('fillRect blanks a region (clamped to the image)', () => {
   expect(px(a, 3, 3)).toEqual([0, 0, 0, 255]);
 });
 
-test('findGameBounds ignores overlays once they are blanked out', () => {
-  const a = make(100, 50, (x, y) => (x >= 20 && x < 80 ? [120, 140, 160] : x >= 85 && y < 20 ? [255, 255, 255] : [0, 0, 0]));
-  expect(img.findGameBounds(a).width).toBe(80); // the overlay in the right bar widens it (20..99)…
-  img.fillRect(a, { x: 85, y: 0, width: 15, height: 20 });
+test('findGameBounds ignores an overlay touching the game once it is blanked out', () => {
+  const a = make(100, 50, (x, y) => (x >= 20 && x < 80 ? [120, 140, 160] : x >= 80 && y < 20 ? [255, 255, 255] : [0, 0, 0]));
+  expect(img.findGameBounds(a).width).toBe(80); // the overlay right next to the game widens it…
+  img.fillRect(a, { x: 80, y: 0, width: 20, height: 20 });
   expect(img.findGameBounds(a)).toEqual({ x: 20, y: 0, width: 60, height: 50 }); // …until blanked
+});
+
+test('findGameBounds skips anything separated from the game by black', () => {
+  // A full-screen game on a laptop: menu bar and window title bar on top, a black strip, the game.
+  const a = make(100, 60, (x, y) => (y < 6 ? [200, 200, 200] : y < 10 ? [60, 60, 60] : y < 16 ? [0, 0, 0] : x >= 2 ? [120, 140, 160] : [0, 0, 0]));
+  expect(img.findGameBounds(a)).toEqual({ x: 2, y: 16, width: 98, height: 44 });
+  // …and an overlay out in the black bar beside the game.
+  const b = make(100, 50, (x, y) => (x >= 20 && x < 80 ? [120, 140, 160] : x >= 85 && y < 20 ? [255, 255, 255] : [0, 0, 0]));
+  expect(img.findGameBounds(b)).toEqual({ x: 20, y: 0, width: 60, height: 50 });
 });

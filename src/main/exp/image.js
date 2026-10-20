@@ -103,27 +103,35 @@ function fillRect(img, rect, value = 0) {
   return img;
 }
 
-// The game can be pillarboxed (black bars). Bounds = rows/columns with some non-black content.
-function findGameBounds(img, { minLuminance = 24, minShare = 0.02 } = {}) {
-  const cols = new Uint32Array(img.width);
-  const rows = new Uint32Array(img.height);
-  for (let y = 0; y < img.height; y++)
-    for (let x = 0; x < img.width; x++) {
-      if (luminance(img.data, (y * img.width + x) * 4) > minLuminance) {
-        cols[x]++;
-        rows[y]++;
-      }
+// The longest run of indexes whose count reaches `need`: [first, last], or null.
+function longestRun(counts, need) {
+  let best = null;
+  let start = -1;
+  for (let i = 0; i <= counts.length; i++) {
+    const on = i < counts.length && counts[i] >= need;
+    if (on && start < 0) start = i;
+    if (!on && start >= 0) {
+      if (!best || i - start > best[1] - best[0] + 1) best = [start, i - 1];
+      start = -1;
     }
-  const first = (arr, need) => arr.findIndex((n) => n >= need);
-  const last = (arr, need) => arr.length - 1 - [...arr].reverse().findIndex((n) => n >= need);
-  const colNeed = Math.max(1, img.height * minShare);
-  const rowNeed = Math.max(1, img.width * minShare);
-  const x0 = first(cols, colNeed);
-  const y0 = first(rows, rowNeed);
-  if (x0 < 0 || y0 < 0) return null;
-  const x1 = last(cols, colNeed);
-  const y1 = last(rows, rowNeed);
-  return { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+  }
+  return best;
+}
+
+// The game area: the biggest block of non-black content. The game can be pillarboxed (black bars),
+// and in full screen on a laptop the menu bar and window title bar stay above a black strip; both
+// are cut off by the black around the game.
+function findGameBounds(img, { minLuminance = 24, minShare = 0.02 } = {}) {
+  const bright = (x, y) => luminance(img.data, (y * img.width + x) * 4) > minLuminance;
+  const rows = new Uint32Array(img.height);
+  for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) if (bright(x, y)) rows[y]++;
+  const ys = longestRun(rows, Math.max(1, img.width * minShare));
+  if (!ys) return null;
+  const cols = new Uint32Array(img.width);
+  for (let y = ys[0]; y <= ys[1]; y++) for (let x = 0; x < img.width; x++) if (bright(x, y)) cols[x]++;
+  const xs = longestRun(cols, Math.max(1, (ys[1] - ys[0] + 1) * minShare));
+  if (!xs) return null;
+  return { x: xs[0], y: ys[0], width: xs[1] - xs[0] + 1, height: ys[1] - ys[0] + 1 };
 }
 
 // --- PNG (8-bit RGBA, no interlace) ---
