@@ -22,7 +22,8 @@ const ADVANCE = { d: 6, ',': 5, '[': 6, '.': 4 }; // in the game's own pixels
 const GLYPH_WIDTH = 5; // a digit's drawn width, in the game's own pixels
 const BRACKET_INK = 2.33; // where the "[" ink starts inside its character cell, in game pixels
 const BRACKET_SEARCH = 1.5; // …give or take this much
-const BRACKET_MIN_HEIGHT = 5; // the "[" is about 7 game pixels tall
+const BRACKET_HEIGHT = 6.2; // the "[" as a sharp capture measures it, in game pixels (about 7 drawn)
+const BRACKET_MIN_HEIGHT = 5;
 const MAX_DISTANCE = 0.07; // sure: mean per-cell difference allowed for a digit match
 const MIN_MARGIN = 0.025; // sure: the best digit must beat every other digit by this much
 const UNSURE_MAX_DISTANCE = 0.14; // unsure: no digit may be further off than this
@@ -77,8 +78,12 @@ const findBracket = (img, scale) => findBrackets(img, scale)[0] || null;
 function prepare(img, scale) {
   const bracket = findBracket(img, scale);
   if (!bracket) return null;
-  // Digits stand about half a game pixel taller than the bracket.
-  const band = { y0: Math.max(0, Math.round(bracket.y0 - 0.5 * scale)), y1: bracket.y1 };
+  // The text rows come from the bracket's centre and the scale, not its measured top and bottom: a
+  // screen stream can soften colour enough to fade its green top and bottom rows. Digits stand about
+  // half a game pixel taller than the bracket.
+  const centre = (bracket.y0 + bracket.y1) / 2;
+  const half = (BRACKET_HEIGHT * scale) / 2;
+  const band = { y0: Math.max(0, Math.round(centre - half - 0.5 * scale)), y1: Math.min(img.height - 1, Math.round(centre + half)) };
   const L = luminanceGrid(img);
   const t = textThreshold(L.subarray(band.y0 * img.width, (band.y1 + 1) * img.width));
   return t === null ? null : { L, t, band, bracket, width: img.width };

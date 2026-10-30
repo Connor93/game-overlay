@@ -7,8 +7,9 @@ const dir = path.join(__dirname, 'fixtures/exp');
 const SCALE = 1440 / 768;
 // Live in-game EXP crops, named by their text: ingame-exp-30_146_74_41.png = "30,146[74.41%]".
 // ingame-: a 1440-pixel-tall game (big monitor). laptop-: a 1890-pixel-tall game in a window on a
-// laptop, cropped wider so the end of the "EXP." label is in the crop too.
-const SCALES = { ingame: SCALE, laptop: 1890 / 768 };
+// laptop, cropped wider so the end of the "EXP." label is in the crop too. stream-: the big monitor
+// through a screen stream that softens colour, so the green bracket's top and bottom rows fade.
+const SCALES = { ingame: SCALE, laptop: 1890 / 768, stream: SCALE };
 const load = (prefix) =>
   fs
     .readdirSync(dir)
@@ -19,10 +20,17 @@ const load = (prefix) =>
     });
 const big = load('ingame');
 const laptop = load('laptop');
+const stream = load('stream');
 const live = [...big, ...laptop];
 
 test('reads every live in-game crop exactly, and is sure of it', () => {
   for (const s of live) expect(readExpNumbers(s.crop, s.scale)).toEqual({ ...s.truth, sure: true });
+});
+
+// Templates never come from these: they show what a softer capture does to crops it hasn't seen.
+test('a capture that softens the green bracket still reads exactly, and is sure of it', () => {
+  expect(stream.length).toBe(3);
+  for (const s of stream) expect(readExpNumbers(s.crop, s.scale)).toEqual({ ...s.truth, sure: true });
 });
 
 // The honest test: read each crop with templates built only from the others.
