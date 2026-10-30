@@ -22,10 +22,12 @@ const big = load('ingame');
 const laptop = load('laptop');
 const stream = load('stream');
 const live = [...big, ...laptop];
+// Matching every crop takes a second or two here; CI machines can be several times slower.
+const SLOW = 30000;
 
 test('reads every live in-game crop exactly, and is sure of it', () => {
   for (const s of live) expect(readExpNumbers(s.crop, s.scale)).toEqual({ ...s.truth, sure: true });
-});
+}, SLOW);
 
 // Templates never come from these: they show what a softer capture does to crops it hasn't seen.
 test('a capture that softens the green bracket still reads exactly, and is sure of it', () => {
@@ -44,18 +46,18 @@ test('on unseen crops a sure reading is never wrong, and most are read', () => {
     }
   }
   expect(sure).toBeGreaterThanOrEqual(Math.ceil((live.length * 2) / 3));
-});
+}, SLOW);
 
 // A new screen size: templates from the big monitor only. The digits are blurred differently, so
 // it may be unsure, but its best reading is still right.
 test('at a screen size it has no templates for, its best reading is still right', () => {
   const templates = buildTemplates(big);
   for (const s of laptop) expect(readExpNumbers(s.crop, s.scale, templates)).toMatchObject(s.truth);
-});
+}, SLOW);
 
 test('the "EXP." label in the crop is not read as digits', () => {
   for (const s of laptop) expect(readExpNumbers(s.crop, s.scale).exp).toBe(s.truth.exp);
-});
+}, SLOW);
 
 test('without the green bracket there is no reading', () => {
   const s = big[0];
