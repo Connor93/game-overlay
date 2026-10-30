@@ -1,13 +1,7 @@
-### New: EXP tracker
-- A new panel reads your EXP bar and the minimap's map name off the screen and shows **EXP per hour**, EXP gained, session time, time to level and the last 5 minutes' rate.
-- Sessions start with **Start session** (⌃⌥S / Ctrl+Alt+S) or by themselves once you gain EXP steadily, pause after 45 seconds without EXP, and end when you change maps. **History** keeps your sessions for each map, with your best rate.
-- Works at any resolution, in full screen or borderless / windowed full screen (a small game window on the desktop isn't supported yet). It only looks at the screen; it never touches the game.
-- **macOS:** allow Game Overlay in System Settings → Privacy & Security → Screen & System Audio Recording (the panel has a button for it). See the README if it stops working after an update.
-
 ### Fixed
-- **Windows:** the meowdb panel can be made smaller again by dragging its edges (it could only grow).
+- **EXP tracker:** on some screens the panel kept saying "Can't find the EXP bar" or "not sure of the numbers yet" while the game was right there. The live screen capture can soften colours slightly, which threw off how the tracker lined up the EXP digits. It now reads them as reliably live as on a screenshot.
 
 ### Upgrading
-- **From 0.2.x:** install over it. Your settings carry over.
+- **From 0.3.0 or 0.2.x:** install over it. Your settings and EXP history carry over.
 - **From Overlay Clock:** install Game Overlay, then quit and uninstall Overlay Clock (see the README).
-- **macOS:** allow the app once in System Settings → Privacy & Security, or run `xattr -dr com.apple.quarantine "/Applications/Game Overlay.app"`.
+- **macOS:** allow the app once in System Settings → Privacy & Security, or run `xattr -dr com.apple.quarantine "/Applications/Game Overlay.app"`. If the EXP tracker stops finding the EXP bar after the update, remove Game Overlay from Screen & System Audio Recording with **−**, add it again with **+**, and reopen the app (see the README).
